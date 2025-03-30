@@ -1,2 +1,5 @@
 # Ignore all compiled binary files
 *.out
+
+# Ignore all JSON log files
+*.json

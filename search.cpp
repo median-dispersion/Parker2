@@ -35,7 +35,7 @@ using namespace std;
 const uint64_t SEARCH_RANGE_MINIMUM = 0;
 const uint64_t SEARCH_RANGE_MAXIMUM = 1000;
 const uint64_t BATCH_SIZE           = 1000000;
-const uint8_t  RESULT_LEVEL         = 10;
+const uint8_t  LOG_SQUARE_TYPE      = 10;
 
 // GMP integers
 mpz_t 
@@ -155,30 +155,35 @@ void getValues(uniform_int_distribution<uint64_t> &distribution, mt19937 &genera
 }
 
 // ================================================================================================
-// Print the result as JSON
+// Log a found square
 // ================================================================================================
-void printResult(uint16_t level, uint64_t *values) {
+void logMagicSquare(uint16_t type, uint64_t *values) {
 
-    // Print the result as JSON
-    cout << "{\"message\":\"result\",\"level\":" << level << ",\"values\":[";
+    // Only log result if magic square is of certain type
+    if (type <= LOG_SQUARE_TYPE) {
 
-    // For each value
-    for (uint8_t value = 0; value < 9; value++) {
+        // Print the result as JSON
+        cout << "{\"message\":\"square\",\"type\":" << type << ",\"values\":[";
 
-        // Add the value to the JSON array
-        cout << values[value];
+        // For each value
+        for (uint8_t value = 0; value < 9; value++) {
 
-        // If not the last value add a ","
-        if (value + 1 < 9) {
+            // Add the value to the JSON array
+            cout << values[value];
 
-            cout << ",";
+            // If not the last value add a ","
+            if (value + 1 < 9) {
+
+                cout << ",";
+
+            }
 
         }
 
-    }
+        // Add trailing "]}"
+        cout << "]}" << endl;
 
-    // Add trailing "]}"
-    cout << "]}" << endl;
+    }
 
 }
 
@@ -263,42 +268,30 @@ void calculateMagicSquare(uint64_t *values) {
 
                             // A full magic square was found!!!
 
-                            // Print result with level 0
-                            printResult(0, values);
+                            // Log magic square with type 0
+                            logMagicSquare(0, values);
 
                         // A magic square with all rows, all columns and one diagonal was found
                         } else {
 
-                            if (RESULT_LEVEL > 0) {
-
-                                // Print result with level 2
-                                printResult(1, values);
-                            
-                            }
+                            // Log magic square with type 1
+                            logMagicSquare(1, values);
 
                         }
 
                     // A magic square with all rows, all columns and no diagonal was found
                     } else {
 
-                        if (RESULT_LEVEL > 1) {
-
-                            // Print result with level 2
-                            printResult(2, values);
-
-                        }
+                        // Log magic square with type 2
+                        logMagicSquare(2, values);
 
                     }
                 
                 // A magic square with all rows and one column was found
                 } else {
 
-                    if (RESULT_LEVEL > 3) {
-
-                        // Print result with level 4
-                        printResult(4, values);
-
-                    }
+                    // Log magic square with type 4
+                    logMagicSquare(4, values);
 
                 }
 
@@ -386,7 +379,7 @@ int main() {
         chrono::duration<double, milli> duration = end - start;
 
         // Print JSON status message
-        cout << "{\"message\":\"status\",\"minimum\":" << SEARCH_RANGE_MINIMUM << ",\"maximum\":" << SEARCH_RANGE_MAXIMUM << ",\"iterations\":" << BATCH_SIZE << ",\"durationMilliseconds\":" << duration.count() << "}" << endl;
+        cout << "{\"message\":\"status\",\"minimum\":" << SEARCH_RANGE_MINIMUM << ",\"maximum\":" << SEARCH_RANGE_MAXIMUM << ",\"iterations\":" << BATCH_SIZE << ",\"durationMilliseconds\":" << static_cast<uint64_t>(duration.count()) << "}" << endl;
 
     }
 
