@@ -30,7 +30,7 @@ THREAD_LOCK = threading.Lock()
 STATUS = {
 
     "iterations": 0,
-    "durationMilliseconds": 0
+    "squares": 0
 
 }
 
@@ -77,8 +77,8 @@ def updateStatus(data):
     # Get thread lock
     with THREAD_LOCK:
 
-        STATUS["iterations"]           += data["iterations"]
-        STATUS["durationMilliseconds"] += data["durationMilliseconds"]
+        # Add to the total number of iterations
+        STATUS["iterations"] += data["iterations"]
 
 # =================================================================================================
 # 
@@ -99,6 +99,9 @@ def writeMagicSquare(data):
 
         # Write magic square to file
         with open(SQUARES_FILE, "a") as file: file.write(json.dumps(square) + "\n")
+
+        # Add one to the number of found squares
+        STATUS["squares"] += 1
 
 # =================================================================================================
 # Search thread
@@ -182,9 +185,48 @@ def startThreads():
 # =================================================================================================
 # 
 # =================================================================================================
-def printStatus():
+def formatIterations(iterations):
 
-    date = time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime())
+    # Unit strings
+    units = ["", "thousand", "million", "billion", "trillion", "quadrillion", "quintillion"]
+
+    # Selected unit string
+    unit = 0
+
+    # If the iteration count is more that 999 *Unit*
+    while iterations >= 1000 and unit < len(units) - 1:
+
+        # Divide to get the next unit
+        iterations /= 1000.0
+
+        # Increase the selected unit
+        unit += 1
+
+    # Return iterations as a formatted string
+    return f"{round(iterations, 2)} {units[unit]}".strip()
+
+# =================================================================================================
+# 
+# =================================================================================================
+def formatDuration(duration):
+
+    # Time unit strings
+    units = ["seconds", "minutes", "hours", "days", "months", "years"]
+
+    # Selected unit string
+    unit = 0
+
+    # If the duration count is more that 60 *Time unit*
+    while duration >= 60 and unit < len(units) - 1:
+
+        # Divide to get the next time unit
+        duration /= 60
+
+        # Increase the selected unit
+        unit += 1
+
+    # Return duration as a formatted string
+    return f"{round(duration, 2)} {units[unit]}".strip()
 
 # =================================================================================================
 # Main function
@@ -200,14 +242,25 @@ def main():
     # Start search threads
     startThreads()
 
+    # Get the loop start time
+    startTime = time.time()
+
     # Main loop
     try:
 
         # Loop forever
         while True:
 
-            print( f"{STATUS["iterations"]:,} iterations in {STATUS['durationMilliseconds']} ms...".replace(',', '.') )
+            # Print status message
+            print(
+                f"{time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime())} >> " +
+                f"Found {STATUS["squares"]} potential magic squares in " +
+                f"{formatIterations(STATUS["iterations"])} iterations and took " +
+                f"{formatDuration(time.time() - startTime)} " +
+                f"({formatIterations((STATUS["iterations"] / (time.time() - startTime)) * 3600)} iterations per hour)..."
+            )
 
+            # Wait 5 seconds before printing the next status message
             time.sleep(5)
     
     # Handle keyboard interrupts
