@@ -31,11 +31,18 @@ using namespace std;
 // ------------------------------------------------------------------------------------------------
 // Global variables
 
-// Search parameters
+// Minimum value a square cell can be
 const uint64_t SEARCH_RANGE_MINIMUM = 0;
+
+// Maximum value a square cell can be
 const uint64_t SEARCH_RANGE_MAXIMUM = 1000;
-const uint64_t BATCH_SIZE           = 1000000;
-const uint8_t  LOG_SQUARE_TYPE      = 10;
+
+// Number of iterations that will be performed in each loop 
+const uint64_t BATCH_SIZE = 100000000;
+
+// Type of magic square the result has to be before it gets logged
+// A perfect square is 0, a less perfect square is 1, and so on
+const uint8_t LOG_SQUARE_TYPE = 10;
 
 // GMP integers
 mpz_t 
@@ -114,7 +121,7 @@ void getValues(uniform_int_distribution<uint64_t> &distribution, mt19937 &genera
     // Number of unique values
     uint8_t unique = 0;
 
-    // Loop unit 9 unique values are generated
+    // Loop until 9 unique values are generated
     while (unique < 9) {
 
         // Get a random number in the search range
@@ -379,7 +386,11 @@ int main() {
         chrono::duration<double, milli> duration = end - start;
 
         // Print JSON status message
-        cout << "{\"message\":\"status\",\"minimum\":" << SEARCH_RANGE_MINIMUM << ",\"maximum\":" << SEARCH_RANGE_MAXIMUM << ",\"iterations\":" << BATCH_SIZE << ",\"durationMilliseconds\":" << static_cast<uint64_t>(duration.count()) << "}" << endl;
+        cout << "{\"message\":\"status\",\"minimum\":" << SEARCH_RANGE_MINIMUM 
+        << ",\"maximum\":" << SEARCH_RANGE_MAXIMUM 
+        << ",\"iterations\":" << BATCH_SIZE 
+        << ",\"durationMilliseconds\":" << static_cast<uint64_t>(duration.count()) 
+        << "}" << endl;
 
     }
 
