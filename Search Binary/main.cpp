@@ -17,8 +17,8 @@ bool isPerfectSquare(int64_t number) {
 
 int main(int, char* argv[]) {
 
-    int64_t start = stoi(argv[1]);
-    int64_t end   = stoi(argv[2]);
+    int64_t start = stoll(argv[1]);
+    int64_t end   = stoll(argv[2]);
 
     for (int64_t e = start; e < end; e++) {
 

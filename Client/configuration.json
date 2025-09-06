@@ -1,0 +1,39 @@
+{
+
+    "logger": {
+
+        "filePath": "./client.log",
+        "debug":    true,
+        "info":     true,
+        "success":  true,
+        "warning":  true,
+        "error":    true
+
+    },
+
+    "server": {
+
+        "host":   "localhost",
+        "port":   5000,
+        "apiKey": "API-Key",
+
+        "request": {
+
+            "delaySeconds":   1,
+            "timeoutSeconds": 30
+
+        }
+
+    },
+
+    "search": {
+
+        "filePath":              "./search.json",
+        "binaryPath":            "../Search Binary/search.out",
+        "targetDurationSeconds": 300,
+        "timeoutFactor":         3,
+        "idleCores":             1
+
+    }
+
+}
