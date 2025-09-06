@@ -328,10 +328,10 @@ def completeJob():
     if jobWasRunning == False:
 
         # Log a warning message
-        logger.warning(f"Bad request from '{request.remote_addr}' on '{request.path}'! Job '{jobData["id"]}' is not running!")
+        logger.warning(f"Bad request from '{request.remote_addr}' on '{request.path}'! Job '{jobData['id']}' is not running!")
 
         # Return a 400 - Bad Request
-        return jsonify({"status": 400, "message": f"Bad Request - Job '{jobData["id"]}' is not running!"}), 400
+        return jsonify({"status": 400, "message": f"Bad Request - Job '{jobData['id']}' is not running!"}), 400
 
     # Log an info message
     logger.info(f"Received a completed job from '{request.remote_addr}'! Job data: '{jobData}'.")
@@ -462,7 +462,7 @@ if __name__ == "__main__":
     logger.setLevel(logger.Level.ERROR,   configuration["logger"]["error"])
 
     # Log a info message
-    logger.info(f"Initialized logger! Output path: '{configuration["logger"]["filePath"]}', debug: '{configuration["logger"]["debug"]}', info: '{configuration["logger"]["info"]}', success: '{configuration["logger"]["success"]}', warning: '{configuration["logger"]["warning"]}', error: '{configuration["logger"]["error"]}'.")
+    logger.info(f"Initialized logger! Output path: '{configuration['logger']['filePath']}', debug: '{configuration['logger']['debug']}', info: '{configuration['logger']['info']}', success: '{configuration['logger']['success']}', warning: '{configuration['logger']['warning']}', error: '{configuration['logger']['error']}'.")
 
     # Try loading the search data
     try:
@@ -494,7 +494,7 @@ if __name__ == "__main__":
             with open(configuration["search"]["filePath"], "w") as file: json.dump(search, file, indent=4)
 
             # Log a warning message
-            logger.warning(f"Failed to load search data! File '{configuration["search"]["filePath"]}' was not found. Created a new file.")
+            logger.warning(f"Failed to load search data! File '{configuration['search']['filePath']}' was not found. Created a new file.")
 
     # If an exception occurs
     except Exception as exception:
@@ -519,7 +519,7 @@ if __name__ == "__main__":
     logger.info(f"Initialized search with a start index of '{nextStartIndex}'!")
 
     # Log a info message
-    logger.info(f"Started server on '{configuration["server"]["host"]}:{configuration["server"]["port"]}'!")
+    logger.info(f"Started server on '{configuration['server']['host']}:{configuration['server']['port']}'!")
 
     # Start flask server
     server.run(host=configuration["server"]["host"], port=configuration["server"]["port"])

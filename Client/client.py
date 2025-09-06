@@ -106,7 +106,7 @@ if __name__ == "__main__":
     logger.setLevel(logger.Level.ERROR,   configuration["logger"]["error"])
 
     # Log a info message
-    logger.info(f"Initialized logger! Output path: '{configuration["logger"]["filePath"]}', debug: '{configuration["logger"]["debug"]}', info: '{configuration["logger"]["info"]}', success: '{configuration["logger"]["success"]}', warning: '{configuration["logger"]["warning"]}', error: '{configuration["logger"]["error"]}'.")
+    logger.info(f"Initialized logger! Output path: '{configuration['logger']['filePath']}', debug: '{configuration['logger']['debug']}', info: '{configuration['logger']['info']}', success: '{configuration['logger']['success']}', warning: '{configuration['logger']['warning']}', error: '{configuration['logger']['error']}'.")
 
     # Search structure
     search = {
@@ -136,7 +136,7 @@ if __name__ == "__main__":
             with open(configuration["search"]["filePath"], "w") as file: json.dump(search, file, indent=4)
 
             # Log a warning message
-            logger.warning(f"Failed to load search data! File '{configuration["search"]["filePath"]}' was not found. Created a new file.")
+            logger.warning(f"Failed to load search data! File '{configuration['search']['filePath']}' was not found. Created a new file.")
 
     # If an exception occurs
     except Exception as exception:
@@ -148,7 +148,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Log info message
-    logger.info(f"Initialized search data! Loaded results: '{len(search["results"])}'.")
+    logger.info(f"Initialized search data! Loaded results: '{len(search['results'])}'.")
 
     # Worker report queue
     reportQueue = queue.Queue()
@@ -173,7 +173,7 @@ if __name__ == "__main__":
 
             workerID,
             reportQueue,
-            f"{configuration["server"]["host"]}:{configuration["server"]["port"]}",
+            f"{configuration['server']['host']}:{configuration['server']['port']}",
             configuration["server"]["apiKey"],
             configuration["server"]["request"]["delaySeconds"],
             configuration["server"]["request"]["timeoutSeconds"],
