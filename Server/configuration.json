@@ -1,0 +1,28 @@
+{
+
+    "server": {
+
+        "host":   "0.0.0.0",
+        "port":   5000,
+        "apiKey": "API-Key"
+
+    },
+
+    "logger": {
+
+        "filePath": "./server.log",
+        "debug":    true,
+        "info":     true,
+        "success":  true,
+        "warning":  true,
+        "error":    true
+
+    },
+
+    "search": {
+
+        "filePath": "./search.json"
+
+    }
+
+}

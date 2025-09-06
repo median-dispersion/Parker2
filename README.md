@@ -12,9 +12,16 @@ A list of requirements to compile and use these tools:
 
 - git
 - build-essential (g++, make)
+- Python 3+ (python3, python3-pip)
 
 Installation Linux (Debian / Ubuntu):
 
 ```bash
-sudo apt-get install git build-essential
+sudo apt-get install git build-essential python3 python3-pip
+```
+
+Install required Python packages:
+
+```bash
+pip install -r requirements.txt
 ```
