@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <cmath>
 
 using namespace std;
 
@@ -93,6 +94,54 @@ uint64_t countUniqueSumOfSquares(const vector<pair<uint64_t, uint64_t>>& primeFa
 }
 
 // ================================================================================================
+// Direct (brut force) way of searching for all unique pairs of integers that if squared and summed would represent 2E²
+// ================================================================================================
+vector<pair<uint64_t, uint64_t>> getOrderedUniqueBasePairsDirect(const uint64_t e) {
+
+    // This search function will only work to a value of E < 2147483648
+    // Because otherwise 2E² would overflow the maximum value of an unsigned 64 bit integer
+
+    // Search constraints
+    // 2E² = X² + Y²
+    // X² ≠ Y²
+    // X² > 0
+    // X² < E²
+    // Y² > E²
+    // Y² < 2E²
+
+    // List of base pairs
+    vector<pair<uint64_t, uint64_t>> basePairs;
+
+    // Target sum is 2E²
+    uint64_t targetSum = 2 * e * e;
+
+    // Y² > E² therfore Y > E and Y² < 2E² therfore Y < √2E²
+    // Loop through every possible value of Y in decreasing order
+    // Doing it in this way will automaticaly sort the pairs from smallest to largest
+    for (uint64_t y = sqrt(targetSum); y > e; y--) {
+
+        // Solve for X²
+        uint64_t xSquared = targetSum - y * y;
+
+        // Take the root of X² to get X 
+        uint64_t x = sqrt(xSquared);
+
+        // Check if X is a perfect square
+        if (x * x == xSquared) {
+
+            // Add to the list of base pairs
+            basePairs.emplace_back(x, y);
+
+        }
+
+    }
+
+    // Return the list of base pairs
+    return basePairs;
+
+}
+
+// ================================================================================================
 // Main
 // ================================================================================================
 int main(int, char* launchArguments[]) {
@@ -122,6 +171,9 @@ int main(int, char* launchArguments[]) {
 
                     // Manually add 2¹ as a valid prime factor for 2E²
                     primeFactors.emplace_back(2, 1);
+
+                    // Get all pairs of integers that if squared and summed would represent 2E²
+                    vector<pair<uint64_t, uint64_t>> basePairs = getOrderedUniqueBasePairsDirect(e);
 
                 } 
 
