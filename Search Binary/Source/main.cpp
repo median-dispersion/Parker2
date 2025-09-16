@@ -66,6 +66,33 @@ vector<pair<uint64_t, uint64_t>> getValidPrimeFactors(uint64_t e) {
 }
 
 // ================================================================================================
+// Use the sum of two squares theorem to count the number of unique ways 2E² could be represented as a sum of two squares
+// ================================================================================================
+uint64_t countUniqueSumOfSquares(const vector<pair<uint64_t, uint64_t>>& primeFactors) {
+
+    // Number of solutions to the sum of two squares theorem
+    uint64_t count = 4;
+
+    // For each prime factor and its exponent
+    for (auto& [prime, exponent] : primeFactors) {
+
+        // All prime factors of 2E² are proven to be congruent to 1 mod 4
+        // No need to check additional constraints of the sum of two squares theorem
+
+        // Update the number of solutions to the sum of two squares theorem
+        count *= exponent + 1;
+
+    }
+
+    // Compensate for unique ordering and negative solutions
+    count /= 8;
+
+    // Return the number of solutions
+    return count;
+
+}
+
+// ================================================================================================
 // Main
 // ================================================================================================
 int main(int, char* launchArguments[]) {
@@ -90,7 +117,13 @@ int main(int, char* launchArguments[]) {
             // Check if there are any valid prime factors for 2E²
             if (!primeFactors.empty()) {
 
+                // Check if there are at least 4 unique ways to represented 2E² as a sum of two squares
+                if(countUniqueSumOfSquares(primeFactors) >= 4) {
 
+                    // Manually add 2¹ as a valid prime factor for 2E²
+                    primeFactors.emplace_back(2, 1);
+
+                } 
 
             }
 
