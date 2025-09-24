@@ -3,6 +3,7 @@
 #include <vector>
 #include <utility>
 #include <cmath>
+#include <iostream>
 
 using namespace std;
 
@@ -175,7 +176,48 @@ int main(int, char* launchArguments[]) {
                     // Get all pairs of integers that if squared and summed would represent 2E²
                     vector<pair<uint64_t, uint64_t>> basePairs = getOrderedUniqueBasePairsDirect(e);
 
-                } 
+                    // Iterate through all possible pair positions of the magic square
+                    // Excluding rotations and mirrors by fixing the pairs in specific positions based on the pair size
+                    // This is to limit the number of combinations that need to be tested
+                    for (uint64_t column2 = 0; column2 < basePairs.size(); column2++) {
+                        for (uint64_t diagonal1 = column2 + 1; diagonal1 < basePairs.size(); diagonal1++) {
+                            for (uint64_t row2 = diagonal1 + 1; row2 < basePairs.size(); row2++) {
+                                for (uint64_t diagonal2 = row2 + 1; diagonal2 < basePairs.size(); diagonal2++) {
+
+                                    // Square values
+                                    // Works for a value of E < 2147483648
+                                    uint64_t aSquared = basePairs[diagonal1].second * basePairs[diagonal1].second;
+                                    uint64_t bSquared = basePairs[column2].first    * basePairs[column2].first;
+                                    uint64_t cSquared = basePairs[diagonal2].second * basePairs[diagonal2].second;
+                                    uint64_t gSquared = basePairs[diagonal2].first  * basePairs[diagonal2].first;
+                                    uint64_t hSquared = basePairs[column2].second   * basePairs[column2].second;
+                                    uint64_t iSquared = basePairs[diagonal1].first  * basePairs[diagonal1].first;
+
+                                    // Calculate top and bottom row sums
+                                    // Works for a value of E < 1073741824
+                                    uint64_t row1Sum = aSquared + bSquared + cSquared;
+                                    uint64_t row3Sum = gSquared + hSquared + iSquared;
+
+                                    // Check if top and bottom row are identical
+                                    // This is a requirement of a working magic square
+                                    if (row1Sum == row3Sum) {
+
+                                        // Square remaining values
+                                        uint64_t eSquared = e * e;
+                                        uint64_t dSquared = basePairs[row2].first  * basePairs[row2].first;
+                                        uint64_t fSquared = basePairs[row2].second * basePairs[row2].second;
+
+                                        // Print result as JSON
+                                        cout << "{\"aSquared\": " << aSquared << ", \"bSquared\": " << bSquared << ", \"cSquared\": " << cSquared << ", \"dSquared\": " << dSquared << ", \"eSquared\": " << eSquared << ", \"fSquared\": " << fSquared << ", \"gSquared\": " << gSquared << ", \"hSquared\": " << hSquared << ", \"iSquared\": " << iSquared << "}" << endl;
+
+                                    }
+
+                                }
+                            }
+                        }
+                    }
+
+                }
 
             }
 
