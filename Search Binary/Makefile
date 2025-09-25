@@ -15,7 +15,14 @@ OBJECTS = $(patsubst $(SOURCE_DIRECTORY)/%.cpp, $(OBJECT_DIRECTORY)/%.o, $(SOURC
 TARGET  = ./search.out
 
 # Default build rule
-all: clean $(TARGET)
+all: brahmaguptaFibonacciIdentity
+
+# Direct (brute force) pair search method
+directPairSearch: COMPILER_FLAGS += -DDIRECT_PAIR_SEARCH
+directPairSearch: clean $(TARGET)
+
+# Brahmagupta-Fibonacci identity method
+brahmaguptaFibonacciIdentity: clean $(TARGET)
 
 # Link object files to create executable
 $(TARGET): $(OBJECTS)

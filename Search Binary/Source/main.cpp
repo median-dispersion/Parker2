@@ -3,6 +3,8 @@
 #include <vector>
 #include <utility>
 #include <cmath>
+#include <set>
+#include <stdexcept>
 #include <iostream>
 
 using namespace std;
@@ -94,6 +96,9 @@ uint64_t countUniqueSumOfSquares(const vector<pair<uint64_t, uint64_t>>& primeFa
 
 }
 
+// Direct pair search method
+#if DIRECT_PAIR_SEARCH
+
 // ================================================================================================
 // Direct (brut force) way of searching for all unique pairs of integers that if squared and summed would represent 2E²
 // ================================================================================================
@@ -142,6 +147,164 @@ vector<pair<uint64_t, uint64_t>> getOrderedUniqueBasePairsDirect(const uint64_t 
 
 }
 
+// Brahmagupta-Fibonacci identity method
+#else
+
+// ================================================================================================
+// Direct (brut force) way of getting a pair of integers that if squared and summed would represent a prime
+// ================================================================================================
+pair<uint64_t, uint64_t> getPrimeBasePairDirect(const uint64_t prime) {
+
+    // For every possible base value as X up to the square root of the prime
+    for (uint64_t x = 1; x <= prime / x; x++) {
+
+        // Solve for Y²
+        uint64_t ySquared = prime - x * x;
+
+        // Take the root of Y² to get Y
+        uint64_t y = sqrt(ySquared);
+
+        // If Y is a perfect square
+        if (y * y == ySquared) {
+
+            // Return the base pair
+            return {x, y};
+
+        }
+
+    }
+
+    // Keep the compiler happy :)
+    throw runtime_error("Prime can not be represented as a sum of two squares!");
+
+}
+
+// ================================================================================================
+// Use the Brahmagupta-Fibonacci identity to get 2 sets of base pairs
+// ================================================================================================
+set<pair<uint64_t, uint64_t>> getBrahmaguptaFibonacciIdentityPairs(const pair<uint64_t, uint64_t>& pair1, const pair<uint64_t, uint64_t>& pair2) {
+
+    // Multiply values
+    uint64_t product1 = pair1.first  * pair2.first;
+    uint64_t product2 = pair1.second * pair2.second;
+    uint64_t product3 = pair1.first  * pair2.second;
+    uint64_t product4 = pair1.second * pair2.first;
+
+    // Calculate absolute values, ensure no negative solutions
+    uint64_t x1 = product1 > product2 ? product1 - product2 : product2 - product1;
+    uint64_t y1 = product3 + product4;
+    uint64_t x2 = product1 + product2;
+    uint64_t y2 = product3 > product4 ? product3 - product4 : product4 - product3;
+
+    // Ensure unique ordering and therefore no duplicates
+    if (x1 > y1) { swap(x1, y1); }
+    if (x2 > y2) { swap(x2, y2); }
+
+    // Return all unique pairs
+    return {
+
+        {x1, y1},
+        {x2, y2}
+
+    };
+
+}
+
+// ================================================================================================
+// Get all unique pairs of of integers that if squared and summed would represent a prime factor
+// ================================================================================================
+set<pair<uint64_t, uint64_t>> getUniquePrimeFactorBasePairs(const pair<uint64_t, uint64_t>& primeFactor) {
+
+    // Get a pair of integers that if squared and summed would represent the prime factor in its base form
+    pair<uint64_t, uint64_t> primeBasePair = getPrimeBasePairDirect(primeFactor.first);
+
+    // Set of unique integer pairs that if squared and summed would represent the prime factor in its raised form
+    // Initialized with the pair of integers of the prime in its base form P¹
+    set<pair<uint64_t, uint64_t>> basePairs = {primeBasePair};
+
+    // Loop for the number of times the prime is raised to it exponent starting from P¹
+    for (uint64_t exponent = 1; exponent < primeFactor.second; exponent++) {
+
+        // New temporary set of base pairs
+        set<pair<uint64_t, uint64_t>> newBasePairs;
+
+        // For every base pair in the set of all unique base pairs
+        for (auto& basePair : basePairs) {
+
+            // Get a new set of base pairs using the Brahmagupta–Fibonacci identity and add it to the new base pairs set
+            newBasePairs.merge(getBrahmaguptaFibonacciIdentityPairs(basePair, primeBasePair));
+
+        }
+
+        // Set the base pair set to the new base pair set
+        basePairs = newBasePairs;
+
+    }
+
+    // Return the set of base pairs
+    return basePairs;
+
+}
+
+// ================================================================================================
+// Get all unique pairs of of integers that if squared and summed would represent 2E²
+// ================================================================================================
+vector<pair<uint64_t, uint64_t>> getOrderedUniqueBasePairs(const vector<pair<uint64_t, uint64_t>>& primeFactors) {
+
+    // Set of unique integer pairs that if squared and summed would represent 2E²
+    set<pair<uint64_t, uint64_t>> basePairs = {{1, 0}};
+
+    // For every prime factor of 2E²
+    for (auto& primeFactor : primeFactors) {
+
+        // Get a set of unique pairs of integers that if squared and summed would represent the prime factor of 2E²
+        set<pair<uint64_t, uint64_t>> primeBasePairs = getUniquePrimeFactorBasePairs(primeFactor);
+
+        // New temporary set of base pairs
+        set<pair<uint64_t, uint64_t>> newBasePairs;
+
+        // For every base pair in the set of all unique base pairs
+        for (auto& basePair : basePairs) {
+
+            // For every prime factor base pair in the set of all unique prime factor base pairs
+            for (auto& primeBasePair : primeBasePairs) {
+
+                // Get a new set of base pairs using the Brahmagupta–Fibonacci identity and add it to the new base pairs set
+                newBasePairs.merge(getBrahmaguptaFibonacciIdentityPairs(basePair, primeBasePair));
+
+            }
+
+        }
+
+        // Set the base pair set to the new base pair set
+        basePairs = newBasePairs;
+
+    }
+
+    // Create a new list of ordered and unique base pairs
+    vector<pair<uint64_t, uint64_t>> orderedUniqueBasePairs;
+
+    // For every base pair
+    for (auto& basePair : basePairs) {
+
+        // Check if both values are not the same
+        // To ensure 2E² = X² + Y² where X² != Y²
+        if (basePair.first != basePair.second) {
+
+            // Add the unique valid pair to the list
+            orderedUniqueBasePairs.push_back(basePair);
+
+        }
+
+    }
+
+    // Retrun the sorted list
+    return orderedUniqueBasePairs;
+
+}
+
+#endif
+
 // ================================================================================================
 // Main
 // ================================================================================================
@@ -167,14 +330,36 @@ int main(int, char* launchArguments[]) {
             // Check if there are any valid prime factors for 2E²
             if (!primeFactors.empty()) {
 
+                // Get the number of unique ways to represented 2E² as a sum of two squares
+                uint64_t totalUniqueSumOfSquares = countUniqueSumOfSquares(primeFactors);
+
                 // Check if there are at least 4 unique ways to represented 2E² as a sum of two squares
-                if(countUniqueSumOfSquares(primeFactors) >= 4) {
+                if(totalUniqueSumOfSquares >= 4) {
 
                     // Manually add 2¹ as a valid prime factor for 2E²
                     primeFactors.emplace_back(2, 1);
 
-                    // Get all pairs of integers that if squared and summed would represent 2E²
-                    vector<pair<uint64_t, uint64_t>> basePairs = getOrderedUniqueBasePairsDirect(e);
+                    // Use the direct pair search method
+                    #if DIRECT_PAIR_SEARCH
+
+                        // Get all pairs of integers that if squared and summed would represent 2E²
+                        vector<pair<uint64_t, uint64_t>> basePairs = getOrderedUniqueBasePairsDirect(e);
+
+                    // Use the Brahmagupta-Fibonacci identity method
+                    #else
+
+                        // Get all pairs of integers that if squared and summed would represent 2E²
+                        vector<pair<uint64_t, uint64_t>> basePairs = getOrderedUniqueBasePairs(primeFactors);
+
+                    #endif
+
+                    // If calculated and actual number of pairs of integers that if squared and summed would represent 2E² dont match
+                    if (totalUniqueSumOfSquares != basePairs.size()) {
+
+                        // Throw a runtime error because something has gone wrong
+                        throw runtime_error("Calculated and actual number of ways to represent 2E² don't match!");
+
+                    }
 
                     // Iterate through all possible pair positions of the magic square
                     // Excluding rotations and mirrors by fixing the pairs in specific positions based on the pair size
