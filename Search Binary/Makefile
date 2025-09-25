@@ -3,7 +3,7 @@ COMPILER = g++
 COMPILER_FLAGS = -Wall -Wextra -Werror -O3 -march=native -flto -funroll-loops
 
 # Libraries
-LIBRARIES =
+LIBRARIES = -lgmp -lgmpxx
 
 # Directories
 SOURCE_DIRECTORY = ./Source

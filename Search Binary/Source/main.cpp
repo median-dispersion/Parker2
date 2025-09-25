@@ -5,9 +5,25 @@
 #include <cmath>
 #include <set>
 #include <stdexcept>
+#include <gmpxx.h>
 #include <iostream>
 
 using namespace std;
+
+// Magic square struct
+struct MagicSquare {
+
+    uint64_t a;
+    uint64_t b;
+    uint64_t c;
+    uint64_t d;
+    uint64_t e;
+    uint64_t f;
+    uint64_t g;
+    uint64_t h;
+    uint64_t i;
+
+};
 
 // ================================================================================================
 // Get all valid (1 mod 4) prime factors for 2E²
@@ -104,7 +120,7 @@ uint64_t countUniqueSumOfSquares(const vector<pair<uint64_t, uint64_t>>& primeFa
 // ================================================================================================
 vector<pair<uint64_t, uint64_t>> getOrderedUniqueBasePairsDirect(const uint64_t e) {
 
-    // This search function will only work to a value of E < 2147483648
+    // This search function will only work to a value of E < 3037000499 or E < √(2⁶⁴÷2)
     // Because otherwise 2E² would overflow the maximum value of an unsigned 64 bit integer
 
     // Search constraints
@@ -303,7 +319,94 @@ vector<pair<uint64_t, uint64_t>> getOrderedUniqueBasePairs(const vector<pair<uin
 
 }
 
+// End of search method selection
 #endif
+
+// ================================================================================================
+// Test a magic square candidate (precision limited, but fast)
+// ================================================================================================
+void testMagicSquareLimited(const MagicSquare& magicSquare) {
+
+    // Square values
+    // Works for a value of E < 3037000499 or E < √(2⁶⁴÷2)
+    // Because H² could be almost as large as 2E² and with E being more than 3,037,000,499 that would overflow a 64 bit integer
+    uint64_t aSquared = magicSquare.a * magicSquare.a;
+    uint64_t bSquared = magicSquare.b * magicSquare.b;
+    uint64_t cSquared = magicSquare.c * magicSquare.c;
+    uint64_t gSquared = magicSquare.g * magicSquare.g;
+    uint64_t hSquared = magicSquare.h * magicSquare.h;
+    uint64_t iSquared = magicSquare.i * magicSquare.i;
+
+    // Calculate top and bottom row sums
+    // Works for a value of E < 1920767766 or √(2⁶⁴÷5)
+    // Because the sum of A² + B² + C² could be almost 5E² and with E being more than 1,920,767,766 that would overflow a 64 bit integer
+    uint64_t row1Sum = aSquared + bSquared + cSquared;
+    uint64_t row3Sum = gSquared + hSquared + iSquared;
+
+    // Check if top and bottom row are identical
+    // This is a requirement of a working magic square
+    if (row1Sum == row3Sum) {
+
+        // Square remaining values
+        uint64_t dSquared = magicSquare.d * magicSquare.d;
+        uint64_t eSquared = magicSquare.e * magicSquare.e;
+        uint64_t fSquared = magicSquare.f * magicSquare.f;
+
+        // Print result as JSON
+        cout << "{\"e\": " << magicSquare.e << ", \"aSquared\": " << aSquared << ", \"bSquared\": " << bSquared << ", \"cSquared\": " << cSquared << ", \"dSquared\": " << dSquared << ", \"eSquared\": " << eSquared << ", \"fSquared\": " << fSquared << ", \"gSquared\": " << gSquared << ", \"hSquared\": " << hSquared << ", \"iSquared\": " << iSquared << "}" << endl;
+
+    }
+
+}
+
+// ================================================================================================
+// Test a magic square candidate (arbitrary precision, but slow)
+// ================================================================================================
+void testMagicSquare(const MagicSquare& magicSquare) {
+
+    // Static GMP integers
+    static mpz_class aSquared, bSquared, cSquared, dSquared, eSquared, fSquared, gSquared, hSquared, iSquared, row1Sum, row3Sum;
+
+    // Convert uint64_t values to GMP integer
+    aSquared = magicSquare.a;
+    bSquared = magicSquare.b;
+    cSquared = magicSquare.c;
+    gSquared = magicSquare.g;
+    hSquared = magicSquare.h;
+    iSquared = magicSquare.i;
+
+    // Square values
+    aSquared = aSquared * aSquared;
+    bSquared = bSquared * bSquared;
+    cSquared = cSquared * cSquared;
+    gSquared = gSquared * gSquared;
+    hSquared = hSquared * hSquared;
+    iSquared = iSquared * iSquared;
+
+    // Calculate top and bottom row sums
+    row1Sum = aSquared + bSquared + cSquared;
+    row3Sum = gSquared + hSquared + iSquared;
+
+    // Check if top and bottom row are identical
+    // This is a requirement of a working magic square
+    if (row1Sum == row3Sum) {
+
+        // Convert remaining values to GMP integer
+        dSquared = magicSquare.d;
+        eSquared = magicSquare.e;
+        fSquared = magicSquare.f;
+
+        // Square remaining values
+        dSquared = dSquared * dSquared;
+        eSquared = eSquared * eSquared;
+        fSquared = fSquared * fSquared;
+
+        // Print result as JSON
+        cout << "{\"e\": " << magicSquare.e << ", \"aSquared\": " << aSquared << ", \"bSquared\": " << bSquared << ", \"cSquared\": " << cSquared << ", \"dSquared\": " << dSquared << ", \"eSquared\": " << eSquared << ", \"fSquared\": " << fSquared << ", \"gSquared\": " << gSquared << ", \"hSquared\": " << hSquared << ", \"iSquared\": " << iSquared << "}" << endl;
+
+    }
+
+}
 
 // ================================================================================================
 // Main
@@ -369,31 +472,34 @@ int main(int, char* launchArguments[]) {
                             for (uint64_t row2 = diagonal1 + 1; row2 < basePairs.size(); row2++) {
                                 for (uint64_t diagonal2 = row2 + 1; diagonal2 < basePairs.size(); diagonal2++) {
 
-                                    // Square values
-                                    // Works for a value of E < 2147483648
-                                    uint64_t aSquared = basePairs[diagonal1].second * basePairs[diagonal1].second;
-                                    uint64_t bSquared = basePairs[column2].first    * basePairs[column2].first;
-                                    uint64_t cSquared = basePairs[diagonal2].second * basePairs[diagonal2].second;
-                                    uint64_t gSquared = basePairs[diagonal2].first  * basePairs[diagonal2].first;
-                                    uint64_t hSquared = basePairs[column2].second   * basePairs[column2].second;
-                                    uint64_t iSquared = basePairs[diagonal1].first  * basePairs[diagonal1].first;
+                                    // Construct a magic square candidate with the base value pairs in their fixed positions
+                                    MagicSquare magicSquare = {
 
-                                    // Calculate top and bottom row sums
-                                    // Works for a value of E < 1073741824
-                                    uint64_t row1Sum = aSquared + bSquared + cSquared;
-                                    uint64_t row3Sum = gSquared + hSquared + iSquared;
+                                        /* A */ basePairs[diagonal1].second,
+                                        /* B */ basePairs[column2].first,
+                                        /* C */ basePairs[diagonal2].second,
+                                        /* D */ basePairs[row2].first,
+                                        /* E */ e,
+                                        /* F */ basePairs[row2].second,
+                                        /* G */ basePairs[diagonal2].first,
+                                        /* H */ basePairs[column2].second,
+                                        /* I */ basePairs[diagonal1].first
 
-                                    // Check if top and bottom row are identical
-                                    // This is a requirement of a working magic square
-                                    if (row1Sum == row3Sum) {
+                                    };
 
-                                        // Square remaining values
-                                        uint64_t eSquared = e * e;
-                                        uint64_t dSquared = basePairs[row2].first  * basePairs[row2].first;
-                                        uint64_t fSquared = basePairs[row2].second * basePairs[row2].second;
+                                    // If E < 1.7*10⁹ use the fast precision limited approach
+                                    // 1.7*10⁹ is around 90% of √(2⁶⁴÷5) with is the maximum value of E the precision limited test can handle
+                                    // There is a 10% safety margin in the calculation to prevent race conditions
+                                    if (e < 1700000000) {
 
-                                        // Print result as JSON
-                                        cout << "{\"aSquared\": " << aSquared << ", \"bSquared\": " << bSquared << ", \"cSquared\": " << cSquared << ", \"dSquared\": " << dSquared << ", \"eSquared\": " << eSquared << ", \"fSquared\": " << fSquared << ", \"gSquared\": " << gSquared << ", \"hSquared\": " << hSquared << ", \"iSquared\": " << iSquared << "}" << endl;
+                                        // Test the magic square candidate and print any valid results
+                                        testMagicSquareLimited(magicSquare);
+                                    
+                                    // If E > 1.7*10⁹ use the slow arbitrary precision approach
+                                    } else {
+
+                                        // Test the magic square candidate and print any valid results
+                                        testMagicSquare(magicSquare);
 
                                     }
 
