@@ -347,10 +347,16 @@ void testMagicSquareLimited(const MagicSquare& magicSquare) {
     // This is a requirement of a working magic square
     if (row1Sum == row3Sum) {
 
-        // Square remaining values
-        uint64_t dSquared = magicSquare.d * magicSquare.d;
+        // The pair position iteration loops do not guarantee that all constraints of a perfect magic square are met
+        // B < I < D < G < E < C < F < A < H is not guaranteed because D and F are skipped
+        // This means at this point the magic square might have duplicate values in it
+        // This is fine because if a square with duplicate values is found one without will also be found
+        // Therefore no additional check for duplicates is performed and all squares are printed (with and without duplicate values)
+
+        // Get remaining values
+        uint64_t dSquared = 3 * magicSquare.d * magicSquare.d - aSquared - gSquared;
         uint64_t eSquared = magicSquare.e * magicSquare.e;
-        uint64_t fSquared = magicSquare.f * magicSquare.f;
+        uint64_t fSquared = 3 * magicSquare.f * magicSquare.f - cSquared - iSquared;
 
         // Print result as JSON
         cout << "{\"e\": " << magicSquare.e << ", \"aSquared\": " << aSquared << ", \"bSquared\": " << bSquared << ", \"cSquared\": " << cSquared << ", \"dSquared\": " << dSquared << ", \"eSquared\": " << eSquared << ", \"fSquared\": " << fSquared << ", \"gSquared\": " << gSquared << ", \"hSquared\": " << hSquared << ", \"iSquared\": " << iSquared << "}" << endl;
@@ -365,7 +371,7 @@ void testMagicSquareLimited(const MagicSquare& magicSquare) {
 void testMagicSquare(const MagicSquare& magicSquare) {
 
     // Static GMP integers
-    static mpz_class aSquared, bSquared, cSquared, dSquared, eSquared, fSquared, gSquared, hSquared, iSquared, row1Sum, row3Sum;
+    static mpz_class aSquared, bSquared, cSquared, dSquared, eSquared, fSquared, gSquared, hSquared, iSquared, row1Sum, row3Sum, factor3;
 
     // Convert uint64_t values to GMP integer
     aSquared = magicSquare.a;
@@ -391,15 +397,22 @@ void testMagicSquare(const MagicSquare& magicSquare) {
     // This is a requirement of a working magic square
     if (row1Sum == row3Sum) {
 
+        // The pair position iteration loops do not guarantee that all constraints of a perfect magic square are met
+        // B < I < D < G < E < C < F < A < H is not guaranteed because D and F are skipped
+        // This means at this point the magic square might have duplicate values in it
+        // This is fine because if a square with duplicate values is found one without will also be found
+        // Therefore no additional check for duplicates is performed and all squares are printed (with and without duplicate values)
+
         // Convert remaining values to GMP integer
         dSquared = magicSquare.d;
         eSquared = magicSquare.e;
         fSquared = magicSquare.f;
+        factor3  = 3;
 
-        // Square remaining values
-        dSquared = dSquared * dSquared;
+        // Get remaining values
+        dSquared = factor3 * dSquared * dSquared - aSquared - gSquared;
         eSquared = eSquared * eSquared;
-        fSquared = fSquared * fSquared;
+        fSquared = factor3 * fSquared * fSquared - cSquared - iSquared;
 
         // Print result as JSON
         cout << "{\"e\": " << magicSquare.e << ", \"aSquared\": " << aSquared << ", \"bSquared\": " << bSquared << ", \"cSquared\": " << cSquared << ", \"dSquared\": " << dSquared << ", \"eSquared\": " << eSquared << ", \"fSquared\": " << fSquared << ", \"gSquared\": " << gSquared << ", \"hSquared\": " << hSquared << ", \"iSquared\": " << iSquared << "}" << endl;
@@ -469,41 +482,39 @@ int main(int, char* launchArguments[]) {
                     // This is to limit the number of combinations that need to be tested
                     for (uint64_t column2 = 0; column2 < basePairs.size(); column2++) {
                         for (uint64_t diagonal1 = column2 + 1; diagonal1 < basePairs.size(); diagonal1++) {
-                            for (uint64_t row2 = diagonal1 + 1; row2 < basePairs.size(); row2++) {
-                                for (uint64_t diagonal2 = row2 + 1; diagonal2 < basePairs.size(); diagonal2++) {
+                            for (uint64_t diagonal2 = diagonal1 + 1; diagonal2 < basePairs.size(); diagonal2++) {
 
-                                    // Construct a magic square candidate with the base value pairs in their fixed positions
-                                    MagicSquare magicSquare = {
+                                // Construct a magic square candidate with the base value pairs in their fixed positions
+                                MagicSquare magicSquare = {
 
-                                        /* A */ basePairs[diagonal1].second,
-                                        /* B */ basePairs[column2].first,
-                                        /* C */ basePairs[diagonal2].second,
-                                        /* D */ basePairs[row2].first,
-                                        /* E */ e,
-                                        /* F */ basePairs[row2].second,
-                                        /* G */ basePairs[diagonal2].first,
-                                        /* H */ basePairs[column2].second,
-                                        /* I */ basePairs[diagonal1].first
+                                    /* A */ basePairs[diagonal1].second,
+                                    /* B */ basePairs[column2].first,
+                                    /* C */ basePairs[diagonal2].second,
+                                    /* D */ e,
+                                    /* E */ e,
+                                    /* F */ e,
+                                    /* G */ basePairs[diagonal2].first,
+                                    /* H */ basePairs[column2].second,
+                                    /* I */ basePairs[diagonal1].first
 
-                                    };
+                                };
 
-                                    // If E < 1.7*10⁹ use the fast precision limited approach
-                                    // 1.7*10⁹ is around 90% of √(2⁶⁴÷5) with is the maximum value of E the precision limited test can handle
-                                    // There is a 10% safety margin in the calculation to prevent race conditions
-                                    if (e < 1700000000) {
+                                // If E < 1.7*10⁹ use the fast precision limited approach
+                                // 1.7*10⁹ is around 90% of √(2⁶⁴÷5) with is the maximum value of E the precision limited test can handle
+                                // There is a 10% safety margin in the calculation to prevent race conditions
+                                if (e < 1700000000) {
 
-                                        // Test the magic square candidate and print any valid results
-                                        testMagicSquareLimited(magicSquare);
-                                    
-                                    // If E > 1.7*10⁹ use the slow arbitrary precision approach
-                                    } else {
+                                    // Test the magic square candidate and print any valid results
+                                    testMagicSquareLimited(magicSquare);
+                                
+                                // If E > 1.7*10⁹ use the slow arbitrary precision approach
+                                } else {
 
-                                        // Test the magic square candidate and print any valid results
-                                        testMagicSquare(magicSquare);
-
-                                    }
+                                    // Test the magic square candidate and print any valid results
+                                    testMagicSquare(magicSquare);
 
                                 }
+
                             }
                         }
                     }
