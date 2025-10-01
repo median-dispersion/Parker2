@@ -1,3 +1,14 @@
-Search Binary/Build
+# Ignore temporary directories
+venv
+__pycache__
+
+# Ignore temporary files
 *.o
 *.out
+*.log
+
+# Ignore directories in specific subdirectories
+Search Binary/Build
+
+# Ignore files in specific subdirectories
+Server/search.json
