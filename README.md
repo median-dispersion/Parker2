@@ -11,9 +11,11 @@ A list of requirements to compile and use these tools:
 - git
 - build-essential (g++, make)
 - GMP (GNU Multiple Precision Arithmetic Library)
+- Python 3+
+- Flask (Python web server)
 
 Installation Linux (Debian / Ubuntu):
 
 ```bash
-sudo apt-get install git build-essential libgmp-dev
+sudo apt-get install git build-essential libgmp-dev python3 python3-pip python3-flask
 ```
