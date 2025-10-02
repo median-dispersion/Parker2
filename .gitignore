@@ -12,3 +12,4 @@ Search Binary/Build
 
 # Ignore files in specific subdirectories
 Server/search.json
+Client/results.json
