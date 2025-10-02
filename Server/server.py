@@ -59,7 +59,7 @@ def issueJob():
     job = search.issueJob(batchSize)
 
     # Log info message
-    logger.info(f"Issued job '{job['id']}' to '{request.remote_addr}'!")
+    logger.info(f"Issued job '{job['id']}' to '{request.remote_addr}' starting at '{job['startIndex']}', ending at '{job['endIndex']}', with a batch size of '{job['batchSize']}'!")
 
     # Return the job
     return jsonify(job), 200

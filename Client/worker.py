@@ -140,7 +140,7 @@ class Worker(threading.Thread):
                             else:
 
                                 # Scale down the next batch size accordingly clamped to a batch size of at least 1
-                                nextBatchSize = max(round(jobTargetDurationSeconds / durationSeconds * nextBatchSize))
+                                nextBatchSize = max(round(jobTargetDurationSeconds / durationSeconds * nextBatchSize), 1)
 
                             # Output info
                             self._output("info", f"Completed job '{job['id']}' in '{round(durationSeconds)}' seconds!")

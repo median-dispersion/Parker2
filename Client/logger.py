@@ -25,6 +25,15 @@ class _Logger:
 
         # Initialize member variables
         self._threadLock = Lock()
+        self._logLevels  = [
+
+            configuration["logger"]["debug"],
+            configuration["logger"]["info"],
+            configuration["logger"]["success"],
+            configuration["logger"]["warning"],
+            configuration["logger"]["error"]
+
+        ]
 
     # =============================================================================================
     # Log functions
@@ -52,55 +61,58 @@ class _Logger:
     # =============================================================================================
     def _log(self, logLevel, message):
 
-        # Get the current date as an ISO string
-        date = datetime.now().astimezone().isoformat()
+        # If log level is enabled
+        if self._logLevels[logLevel.value] is True:
 
-        # Depending on the log level set the message category and color
-        match logLevel:
+            # Get the current date as an ISO string
+            date = datetime.now().astimezone().isoformat()
 
-            case self._LogLevel.DEBUG:
-                category = "[DEBUG]"
-                color    = _ANSI_FOREGROUND_BRIGHT_MAGENTA
+            # Depending on the log level set the message category and color
+            match logLevel:
 
-            case self._LogLevel.INFO:
-                category = "[INFO]"
-                color    = _ANSI_FOREGROUND_BRIGHT_CYAN
+                case self._LogLevel.DEBUG:
+                    category = "[DEBUG]"
+                    color    = _ANSI_FOREGROUND_BRIGHT_MAGENTA
 
-            case self._LogLevel.SUCCESS:
-                category = "[SUCCESS]"
-                color    = _ANSI_FOREGROUND_BRIGHT_GREEN
-            
-            case self._LogLevel.WARNING:
-                category = "[WARNING]"
-                color    = _ANSI_FOREGROUND_BRIGHT_YELLOW
+                case self._LogLevel.INFO:
+                    category = "[INFO]"
+                    color    = _ANSI_FOREGROUND_BRIGHT_CYAN
 
-            case self._LogLevel.ERROR:
-                category = "[ERROR]"
-                color    = _ANSI_FOREGROUND_BRIGHT_RED
+                case self._LogLevel.SUCCESS:
+                    category = "[SUCCESS]"
+                    color    = _ANSI_FOREGROUND_BRIGHT_GREEN
+                
+                case self._LogLevel.WARNING:
+                    category = "[WARNING]"
+                    color    = _ANSI_FOREGROUND_BRIGHT_YELLOW
 
-        # Acquire the thread lock
-        with self._threadLock:
+                case self._LogLevel.ERROR:
+                    category = "[ERROR]"
+                    color    = _ANSI_FOREGROUND_BRIGHT_RED
 
-            # Print the log message to the terminal
-            print(f"{_ANSI_FOREGROUND_BRIGHT_BLUE}{date}{_ANSI_RESET} {_ANSI_BOLD}{color}{category}{_ANSI_RESET} >> {message}")
+            # Acquire the thread lock
+            with self._threadLock:
 
-            # Check if the log file path has been set
-            if configuration["logger"]["filePath"] is not None:
+                # Print the log message to the terminal
+                print(f"{_ANSI_FOREGROUND_BRIGHT_BLUE}{date}{_ANSI_RESET} {_ANSI_BOLD}{color}{category}{_ANSI_RESET} >> {message}")
 
-                # Try writing to the log file
-                try:
+                # Check if the log file path has been set
+                if configuration["logger"]["filePath"] is not None:
 
-                    # Open the log file
-                    with open(configuration["logger"]["filePath"], "a") as file:
+                    # Try writing to the log file
+                    try:
 
-                        # Write the log message to the file
-                        file.write(f"{date} {category} >> {message}\n")
+                        # Open the log file
+                        with open(configuration["logger"]["filePath"], "a") as file:
 
-                # If an exception occurs when writing to the log file
-                except Exception as exception:
+                            # Write the log message to the file
+                            file.write(f"{date} {category} >> {message}\n")
 
-                    # Print a error message
-                    print(f"{_ANSI_FOREGROUND_BRIGHT_BLUE}{date}{_ANSI_RESET} {_ANSI_BOLD}{_ANSI_FOREGROUND_BRIGHT_RED}[ERROR]{_ANSI_RESET} >> Failed writing to the log file '{configuration['logger']['filePath']}'! Exception: '{exception}'.")
+                    # If an exception occurs when writing to the log file
+                    except Exception as exception:
+
+                        # Print a error message
+                        print(f"{_ANSI_FOREGROUND_BRIGHT_BLUE}{date}{_ANSI_RESET} {_ANSI_BOLD}{_ANSI_FOREGROUND_BRIGHT_RED}[ERROR]{_ANSI_RESET} >> Failed writing to the log file '{configuration['logger']['filePath']}'! Exception: '{exception}'.")
 
 # Create a singleton logger instance
 logger = _Logger()

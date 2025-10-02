@@ -350,7 +350,7 @@ class _Search(threading.Thread):
                 self._failedJobs.append(job.getData())
 
                 # Log error message
-                logger.error(f"Job '{job.getID()}' expired! Next start index is '{self._nextStartIndex}'!")
+                logger.error(f"Job '{job.getID()}' expired! Next start index is '{self._nextStartIndex}' and completed end index is '{self._completedEndIndex}'.")
 
                 # Set the flag for checking if a job expired to True
                 jobExpired = True
@@ -412,7 +412,7 @@ class _Search(threading.Thread):
                     self._completedJobs.append(job.getData())
 
                     # Log info message
-                    logger.info(f"Job '{job.getID()}' was completed! Completed end index is '{self._completedEndIndex}'!")
+                    logger.info(f"Job '{job.getID()}' was completed! Next start index is '{self._nextStartIndex}' and completed end index is '{self._completedEndIndex}'.")
 
                     # Set the flag for checking if a job was completed to True
                     jobCompleted = True

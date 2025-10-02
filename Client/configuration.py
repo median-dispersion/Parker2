@@ -26,7 +26,12 @@ configuration = {
 
     "logger": {
 
-        "filePath": "./client.log"
+        "filePath": "./client.log",
+        "debug":    True,
+        "info":     True,
+        "success":  True,
+        "warning":  True,
+        "error":    True
 
     }
 

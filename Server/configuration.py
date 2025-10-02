@@ -14,9 +14,9 @@ configuration = {
 
         "job": {
 
-            "targetDurationSeconds": 300,
-            "updateIntervalSeconds": 30,
-            "timeoutSeconds":        60
+            "targetDurationSeconds": 600,
+            "updateIntervalSeconds": 60,
+            "timeoutSeconds":        120
 
         }
 
@@ -24,7 +24,12 @@ configuration = {
 
     "logger": {
 
-        "filePath": "./server.log"
+        "filePath": "./server.log",
+        "debug":    True,
+        "info":     True,
+        "success":  True,
+        "warning":  True,
+        "error":    True
 
     }
 
