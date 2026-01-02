@@ -1,2 +1,5 @@
-# Parker2
-A collection of brute force tools to find a 3x3 magic square of squares.
+# Parker²
+
+This repository contains brute-force tools designed to search for a 3x3 magic square of squares. The chances of successfully finding one using these methods are extremely, incredibly, **astronomically** low. However, given a sufficiently large search range, an unimaginable amount of time (think the lifespan of the universe), and an extraordinary stroke of luck, one of these approaches *might* just succeed.
+
+A magic square of squares is similar to a regular [magic square](https://en.wikipedia.org/wiki/Magic_square), except that all of its values are perfect squares. These squares gained popularity in 2016 after a series of [Numberphile](https://www.youtube.com/@numberphile) videos, in which a failed attempt was humorously dubbed the "[Parker square](https://www.youtube.com/watch?v=aOT_bG-vWyg)" hence the repository name.
