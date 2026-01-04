@@ -1,0 +1,32 @@
+services:
+
+  # ===============================================================================================
+  # PostgresSQL database
+  # ===============================================================================================
+  postgresql:
+    image: "postgres:latest"
+    ports:
+      - "5432:5432"
+    volumes:
+      - "./Docker/PostgreSQL:/var/lib/postgresql"
+      - "./Database:/docker-entrypoint-initdb.d"
+    env_file:
+      - "./.env"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: "10s"
+      timeout: "10s"
+      start_period: "30s"
+      start_interval: "5s"
+      retries: "5"
+
+  # ===============================================================================================
+  # Adminer database management system
+  # ===============================================================================================
+  adminer:
+    image: "adminer:latest"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgresql:
+        condition: "service_healthy"

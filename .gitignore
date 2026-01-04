@@ -1,0 +1,6 @@
+# Ignore temporary docker files and directories
+Server/Docker
+
+# Ignore all environment files except example ones
+.env*
+!.env.example
