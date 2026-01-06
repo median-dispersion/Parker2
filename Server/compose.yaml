@@ -30,3 +30,16 @@ services:
     depends_on:
       postgresql:
         condition: "service_healthy"
+
+  # ===============================================================================================
+  # FastAPI job scheduler container
+  # ===============================================================================================
+  scheduler:
+    build: "./Scheduler"
+    ports:
+      - "8000:8000"
+    env_file:
+      - "./.env"
+    depends_on:
+      postgresql:
+        condition: "service_healthy"

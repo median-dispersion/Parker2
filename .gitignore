@@ -4,3 +4,7 @@ Server/Docker
 # Ignore all environment files except example ones
 .env*
 !.env.example
+
+# Ignore all temporary python files and directories
+__venv__
+__pycache__
