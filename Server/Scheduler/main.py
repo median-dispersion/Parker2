@@ -2,6 +2,7 @@ import asyncio
 import signal
 import subprocess
 from settings import settings
+from database import initialization, cleanup
 
 # Server process
 server = None
@@ -26,6 +27,9 @@ async def main():
 
     global server
 
+    # Perform database initialization
+    await initialization()
+
     # Register signal handlers to stop the server process in the event of in interrupt or termination
     signal.signal(signal.SIGINT, stop_server)
     signal.signal(signal.SIGTERM, stop_server)
@@ -41,6 +45,9 @@ async def main():
 
     # Wait for the server process to stop
     server.wait()
+
+    # Perform database cleanup
+    await cleanup()
 
 # Check if running directly instead of being imported as a module
 if __name__ == "__main__":
