@@ -12,3 +12,15 @@ CREATE TABLE IF NOT EXISTS searches (
     end_date timestamp with time zone
 
 );
+
+/* ============================================================================================= */
+/* Clients */
+/* ============================================================================================= */
+CREATE TABLE IF NOT EXISTS clients (
+
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    uuid uuid NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+    name character varying(64) NOT NULL,
+    registration_date timestamp with time zone NOT NULL DEFAULT now()
+
+);
