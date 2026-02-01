@@ -32,5 +32,9 @@ class Settings(BaseSettings):
             f"{self.postgres_db}"
         )
 
+    # Scheduler settings
+    scheduler_job_expiration_seconds: int = 300
+    scheduler_job_update_seconds: int = 60
+
 # Create settings instance
 settings = Settings()
