@@ -6,7 +6,7 @@ from pydantic import constr, conint
 from sqlalchemy import text
 from uuid import UUID
 from settings import settings
-from request_body_models import JobUpdate
+from request_body_models import ClientRegistration, JobClaim, JobUpdate
 
 # Initialize FastAPI
 api = FastAPI()
@@ -19,7 +19,7 @@ session_dependency = Annotated[AsyncSession, Depends(get_session)]
 # =================================================================================================
 @api.post("/client/register")
 async def register_client(
-    client_name: constr(min_length=1, max_length=64, strip_whitespace=True),
+    request_body: ClientRegistration,
     database_session: session_dependency
 ):
 
@@ -32,7 +32,7 @@ async def register_client(
                 VALUES (:name)
                 RETURNING uuid;
             """),
-            {"name": client_name}
+            {"name": request_body.client_name}
         )
 
         # Commit changes to database
@@ -58,8 +58,7 @@ async def register_client(
 # =================================================================================================
 @api.post("/job/claim")
 async def claim_job(
-    client_uuid: UUID,
-    job_size: conint(gt=0),
+    request_body: JobClaim,
     database_session: session_dependency
 ):
 
@@ -72,7 +71,7 @@ async def claim_job(
                 FROM clients
                 WHERE uuid = :uuid;
             """),
-            {"uuid": client_uuid}
+            {"uuid": request_body.client_uuid}
         )
 
         # Get the client ID or raise an exception of no ID was selected
@@ -198,7 +197,7 @@ async def claim_job(
                 """),
                 {
                     "client_id": client_id,
-                    "job_size": job_size,
+                    "job_size": request_body.job_size,
                     "expiration_seconds": settings.scheduler_job_expiration_seconds
                 }
             )
@@ -229,7 +228,7 @@ async def claim_job(
 # =================================================================================================
 @api.post("/job/update")
 async def update_job(
-    data: JobUpdate,
+    request_body: JobUpdate,
     database_session: session_dependency
 ):
 
@@ -250,10 +249,10 @@ async def update_job(
                 RETURNING jobs.id;
             """),
             {
-                "current_job_index": data.current_job_index,
+                "current_job_index": request_body.current_job_index,
                 "expiration_seconds": settings.scheduler_job_expiration_seconds,
-                "job_uuid": data.job_uuid,
-                "client_uuid": data.client_uuid
+                "job_uuid": request_body.job_uuid,
+                "client_uuid": request_body.client_uuid
             }
         )
 
