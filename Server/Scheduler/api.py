@@ -6,6 +6,7 @@ from pydantic import constr, conint
 from sqlalchemy import text
 from uuid import UUID
 from settings import settings
+from request_body_models import JobUpdate
 
 # Initialize FastAPI
 api = FastAPI()
@@ -222,3 +223,51 @@ async def claim_job(
         "end_index": job["end_index"],
         "update_seconds": settings.scheduler_job_update_seconds
     }
+
+# =================================================================================================
+# Endpoint for updating
+# =================================================================================================
+@api.post("/job/update")
+async def update_job(
+    data: JobUpdate,
+    database_session: session_dependency
+):
+
+    try:
+
+        # Update the current index of the job that matches the client and job UUID
+        job_id = await database_session.execute(
+            text("""
+                UPDATE jobs
+                SET
+                    current_index = :current_job_index,
+                    expiration_date = now() + (:expiration_seconds * interval '1 second')
+                FROM clients
+                WHERE jobs.uuid = :job_uuid
+                AND jobs.client_id = clients.id
+                AND clients.uuid = :client_uuid
+                AND jobs.state = 'claimed'
+                RETURNING jobs.id;
+            """),
+            {
+                "current_job_index": data.current_job_index,
+                "expiration_seconds": settings.scheduler_job_expiration_seconds,
+                "job_uuid": data.job_uuid,
+                "client_uuid": data.client_uuid
+            }
+        )
+
+        # Commit changes to database
+        await database_session.commit()
+
+        # Get the job ID or raise an exception if no job was updated
+        job_id = job_id.scalar_one()
+
+    # If no job was updated
+    except Exception:
+
+        # No claimed job with the provided client and job UUID was found
+        # Rollback database changes
+        # Return a not found response
+        await database_session.rollback()
+        raise HTTPException(status_code=404)
