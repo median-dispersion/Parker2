@@ -24,3 +24,11 @@ class JobUpdate(BaseModel):
     client_uuid: UUID
     job_uuid: UUID
     current_job_index: conint(gt=0)
+
+# =================================================================================================
+# Request body for completing a job
+# =================================================================================================
+class JobCompletion(BaseModel):
+
+    client_uuid: UUID
+    job_uuid: UUID

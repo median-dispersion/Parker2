@@ -6,7 +6,7 @@ from pydantic import constr, conint
 from sqlalchemy import text
 from uuid import UUID
 from settings import settings
-from request_body_models import ClientRegistration, JobClaim, JobUpdate
+from request_body_models import ClientRegistration, JobClaim, JobUpdate, JobCompletion
 
 # Initialize FastAPI
 api = FastAPI()
@@ -270,3 +270,124 @@ async def update_job(
         # Return a not found response
         await database_session.rollback()
         raise HTTPException(status_code=404)
+    
+# =================================================================================================
+# Endpoint for completing a job
+# =================================================================================================
+@api.post("/job/complete")
+async def complete_job(
+    request_body: JobCompletion,
+    database_session: session_dependency
+):
+
+    try:
+        
+        # Update the state of the job that matches the job and client UUID
+        job_id = await database_session.execute(
+            text("""
+                UPDATE jobs
+                SET
+                    state = 'completed',
+                    current_index = end_index,
+                    expiration_date = NULL,
+                    completion_date = now()
+                WHERE uuid = :job_uuid
+                AND search_id = (
+                    SELECT id
+                    FROM searches
+                    WHERE end_date IS NULL
+                    ORDER BY id DESC
+                    LIMIT 1
+                )
+                AND client_id = (
+                    SELECT id
+                    FROM clients
+                    WHERE uuid = :client_uuid
+                )
+                AND state = 'claimed'
+                RETURNING id;
+            """),
+            {
+                "job_uuid": request_body.job_uuid,
+                "client_uuid": request_body.client_uuid
+            }
+        )
+
+        # Commit changes to database
+        await database_session.commit()
+
+        # Get the job ID or raise an exception if no job was updated
+        job_id = job_id.scalar_one()
+
+    # If no job was updated
+    except Exception:
+
+        # No claimed job with the provided client and job UUID was found
+        # Rollback database changes
+        # Return a not found response
+        await database_session.rollback()
+        raise HTTPException(status_code=404)
+
+    try:
+
+        # Try to update the search end index up to the highest end index of a completed job
+        # In such a way that there are no gaps in the search range
+        # Then set all completed jobs to ended if the are now covered by the updated search end index
+        await database_session.execute(
+            text("""
+                WITH RECURSIVE current_search AS (
+                    SELECT
+                        id,
+                        end_index
+                    FROM searches
+                    WHERE end_date IS NULL
+                    ORDER BY id DESC
+                    LIMIT 1
+                    FOR UPDATE
+                ),
+                completed_jobs AS (
+                    SELECT
+                        id,
+                        start_index,
+                        end_index
+                    FROM jobs
+                    WHERE search_id = (SELECT id FROM current_search)
+                    AND state = 'completed'
+                    FOR UPDATE
+                ),
+                expanded_search AS (
+                    SELECT end_index FROM current_search
+                    UNION ALL
+                    SELECT GREATEST(expanded_search.end_index, completed_jobs.end_index)
+                    FROM expanded_search
+                    INNER JOIN completed_jobs
+                    ON completed_jobs.start_index <= expanded_search.end_index
+                    AND completed_jobs.end_index > expanded_search.end_index
+                ),
+                updated_search AS (
+                    UPDATE searches
+                    SET end_index = (SELECT max(end_index) FROM expanded_search)
+                    WHERE id = (SELECT id FROM current_search)
+                    RETURNING end_index
+                )
+                UPDATE jobs
+                SET
+                    state = 'ended',
+                    end_date = now()
+                FROM completed_jobs
+                WHERE jobs.id = completed_jobs.id
+                AND jobs.end_index <= (SELECT end_index FROM updated_search);
+            """)
+        )
+
+        # Commit changes to database
+        await database_session.commit()
+
+    # If an unhandled exception occurs
+    except Exception:
+
+        # Rollback database changes
+        # Respond with a service temporarily unavailable
+        # Force the client to retry
+        await database_session.rollback()
+        raise HTTPException(status_code=503)
