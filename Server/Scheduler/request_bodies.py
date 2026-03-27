@@ -36,3 +36,20 @@ class JobCompletion(BaseModel):
 
     client_uuid: UUID
     job_uuid: UUID
+
+# =================================================================================================
+# Request body for submitting a result
+# =================================================================================================
+class ResultSubmission(BaseModel):
+
+    client_uuid: UUID
+    job_uuid: UUID
+    a: int
+    b: int
+    c: int
+    d: int
+    e: int
+    f: int
+    g: int
+    h: int
+    i: int

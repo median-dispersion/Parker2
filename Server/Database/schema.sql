@@ -56,3 +56,24 @@ CREATE TABLE IF NOT EXISTS jobs (
     end_date timestamp with time zone
 
 );
+
+/* ============================================================================================= */
+/* Results */
+/* ============================================================================================= */
+CREATE TABLE IF NOT EXISTS results (
+
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    uuid uuid NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+    job_id bigint NOT NULL references jobs(id),
+    submission_date timestamp with time zone NOT NULL DEFAULT now(),
+    a bigint NOT NULL,
+    b bigint NOT NULL,
+    c bigint NOT NULL,
+    d bigint NOT NULL,
+    e bigint NOT NULL,
+    f bigint NOT NULL,
+    g bigint NOT NULL,
+    h bigint NOT NULL,
+    i bigint NOT NULL
+
+);

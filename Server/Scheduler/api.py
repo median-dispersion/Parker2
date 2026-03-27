@@ -12,7 +12,8 @@ from request_bodies import (
     ClientRegistration,
     JobClaim,
     JobUpdate,
-    JobCompletion
+    JobCompletion,
+    ResultSubmission
 )
 
 # Initialize FastAPI
@@ -240,7 +241,7 @@ async def claim_job(
     }
 
 # =================================================================================================
-# Endpoint for updating
+# Endpoint for updating a job
 # =================================================================================================
 @api.post("/job/update")
 async def update_job(
@@ -412,3 +413,61 @@ async def complete_job(
         # Force the client to retry
         await database_session.rollback()
         raise HTTPException(status_code=503)
+
+# =================================================================================================
+# Endpoint for submitting a result
+# =================================================================================================
+@api.post("/result/submit")
+async def submit_result(
+    request_body: ResultSubmission,
+    database_session: session_dependency
+):
+
+    try:
+
+        # Insert the result
+        # As long as the provided UUIDs match a job
+        result_id = await database_session.execute(
+            text("""
+                INSERT INTO results (
+                    job_id,
+                    a, b, c, d, e, f, g, h, i
+                )
+                SELECT
+                    jobs.id,
+                    :a, :b, :c, :d, :e, :f, :g, :h, :i
+                FROM jobs
+                INNER JOIN clients ON clients.id = jobs.client_id
+                WHERE jobs.uuid = :job_uuid
+                AND clients.uuid = :client_uuid
+                RETURNING results.id;
+            """),
+            {
+                "client_uuid": request_body.client_uuid,
+                "job_uuid": request_body.job_uuid,
+                "a": request_body.a,
+                "b": request_body.b,
+                "c": request_body.c,
+                "d": request_body.d,
+                "e": request_body.e,
+                "f": request_body.f,
+                "g": request_body.g,
+                "h": request_body.h,
+                "i": request_body.i
+            }
+        )
+
+        # Commit changes to database
+        await database_session.commit()
+
+        # Get the new result ID or raise an exception if nothing was returned
+        result_id = result_id.scalar_one()
+
+    # If no job was inserted
+    except Exception:
+
+        # Result was not inserted because no job matched the provided job / client UUID
+        # Rollback database changes
+        # Return a not found response
+        await database_session.rollback()
+        raise HTTPException(status_code=404)
