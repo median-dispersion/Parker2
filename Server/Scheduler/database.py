@@ -1,4 +1,8 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    async_sessionmaker,
+    AsyncSession
+)
 from settings import settings
 from sqlalchemy import text
 
@@ -20,7 +24,7 @@ async def get_session() -> AsyncSession:
 # =================================================================================================
 # Database initialization routine
 # =================================================================================================
-async def initialization():
+async def initialization() -> None:
 
     # Get the database session
     async with session() as database_session:
@@ -75,7 +79,7 @@ async def initialization():
 # =================================================================================================
 # Database cleanup routine
 # =================================================================================================
-async def cleanup():
+async def cleanup() -> None:
 
     # Get the database session
     async with session() as database_session:
@@ -87,11 +91,9 @@ async def cleanup():
                 UPDATE searches
                 SET end_date = now()
                 WHERE id = (
-                    SELECT id
+                    SELECT max(id) AS id
                     FROM searches
                     WHERE end_date IS NULL
-                    ORDER BY id DESC
-                    LIMIT 1
                 );
             """))
 

@@ -1,4 +1,8 @@
-from pydantic import BaseModel, constr, conint
+from pydantic import (
+    BaseModel,
+    constr,
+    conint
+)
 from uuid import UUID
 
 # =================================================================================================

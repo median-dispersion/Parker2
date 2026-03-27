@@ -1,12 +1,19 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import (
+    FastAPI,
+    Depends,
+    HTTPException
+)
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_session
-from pydantic import constr, conint
 from sqlalchemy import text
-from uuid import UUID
 from settings import settings
-from request_body_models import ClientRegistration, JobClaim, JobUpdate, JobCompletion
+from request_bodies import (
+    ClientRegistration,
+    JobClaim,
+    JobUpdate,
+    JobCompletion
+)
 
 # Initialize FastAPI
 api = FastAPI()
@@ -69,9 +76,9 @@ async def claim_job(
             text("""
                 SELECT id
                 FROM clients
-                WHERE uuid = :uuid;
+                WHERE uuid = :client_uuid;
             """),
-            {"uuid": request_body.client_uuid}
+            {"client_uuid": request_body.client_uuid}
         )
 
         # Get the client ID or raise an exception of no ID was selected
@@ -80,8 +87,8 @@ async def claim_job(
     # If no client ID was selected
     except Exception:
 
-        # Return with an unauthorized response
-        raise HTTPException(status_code=401)
+        # Return with an not found response
+        raise HTTPException(status_code=404)
 
     try:
 
@@ -91,27 +98,27 @@ async def claim_job(
         # This ensures that every expired job is reissued as a new job and that there are no gaps in the search
         job = await database_session.execute(
             text("""
-                WITH search AS (
-                    SELECT id
-                    FROM searches
-                    WHERE end_date IS NULL
-                    ORDER BY id DESC
-                    LIMIT 1
-                ),
-                expired_job AS (
+                WITH expired_job AS (
                     UPDATE jobs
                     SET state = 'expired'
                     WHERE id = (
-                        SELECT jobs.id
+                        SELECT id
                         FROM jobs
-                        JOIN search ON search.id = jobs.search_id
-                        WHERE jobs.state = 'claimed'
-                        AND jobs.expiration_date <= now()
-                        ORDER BY jobs.start_index ASC
+                        WHERE search_id = (
+                            SELECT max(id) AS id
+                            FROM searches
+                            WHERE end_date IS NULL
+                        )
+                        AND state = 'claimed'
+                        AND expiration_date <= now()
+                        ORDER BY start_index ASC
                         LIMIT 1
                         FOR UPDATE SKIP LOCKED
                     )
-                    RETURNING search_id, start_index, end_index
+                    RETURNING
+                        search_id,
+                        start_index,
+                        end_index
                 )
                 INSERT INTO jobs (
                     search_id,
@@ -122,14 +129,17 @@ async def claim_job(
                     expiration_date
                 )
                 SELECT
-                    expired_job.search_id AS search_id,
-                    :client_id AS client_id,
-                    expired_job.start_index AS start_index,
-                    expired_job.start_index AS current_index,
-                    expired_job.end_index AS end_index,
-                    now() + (:expiration_seconds * interval '1 second') AS expiration_date
+                    expired_job.search_id,
+                    :client_id,
+                    expired_job.start_index,
+                    expired_job.start_index,
+                    expired_job.end_index,
+                    now() + (:expiration_seconds * interval '1 second')
                 FROM expired_job
-                RETURNING uuid, start_index, end_index;
+                RETURNING
+                    uuid,
+                    start_index,
+                    end_index;
             """),
             {
                 "client_id": client_id,
@@ -180,20 +190,26 @@ async def claim_job(
                             expiration_date
                         )
                         SELECT
-                            search.id AS search_id,
-                            :client_id AS client_id,
-                            search.next_index AS start_index,
-                            search.next_index AS current_index,
-                            search.next_index + :job_size AS end_index,
-                            now() + (:expiration_seconds * interval '1 second') AS expiration_date
+                            search.id,
+                            :client_id,
+                            search.next_index,
+                            search.next_index,
+                            search.next_index + :job_size,
+                            now() + (:expiration_seconds * interval '1 second')
                         FROM search
-                        RETURNING search_id, uuid, start_index, end_index
+                        RETURNING
+                            uuid,
+                            start_index,
+                            end_index
                     )
                     UPDATE searches
                     SET next_index = job.end_index
                     FROM job
-                    WHERE id = job.search_id
-                    RETURNING job.uuid, job.start_index, job.end_index;
+                    WHERE id = (SELECT id FROM search)
+                    RETURNING
+                        job.uuid,
+                        job.start_index,
+                        job.end_index;
                 """),
                 {
                     "client_id": client_id,
@@ -241,12 +257,19 @@ async def update_job(
                 SET
                     current_index = :current_job_index,
                     expiration_date = now() + (:expiration_seconds * interval '1 second')
-                FROM clients
-                WHERE jobs.uuid = :job_uuid
-                AND jobs.client_id = clients.id
-                AND clients.uuid = :client_uuid
-                AND jobs.state = 'claimed'
-                RETURNING jobs.id;
+                WHERE uuid = :job_uuid
+                AND search_id = (
+                    SELECT max(id) AS id
+                    FROM searches
+                    WHERE end_date IS NULL
+                )
+                AND client_id = (
+                    SELECT id
+                    FROM clients
+                    WHERE uuid = :client_uuid
+                )
+                AND state = 'claimed'
+                RETURNING id;
             """),
             {
                 "current_job_index": request_body.current_job_index,
@@ -293,11 +316,9 @@ async def complete_job(
                     completion_date = now()
                 WHERE uuid = :job_uuid
                 AND search_id = (
-                    SELECT id
+                    SELECT max(id) AS id
                     FROM searches
                     WHERE end_date IS NULL
-                    ORDER BY id DESC
-                    LIMIT 1
                 )
                 AND client_id = (
                     SELECT id

@@ -10,7 +10,7 @@ server = None
 # =================================================================================================
 # Stop the server process
 # =================================================================================================
-def stop_server(signum, frame):
+def stop_server(signum, frame) -> None:
 
     global server
 
@@ -23,9 +23,7 @@ def stop_server(signum, frame):
 # =================================================================================================
 # Main function
 # =================================================================================================
-async def main():
-
-    global server
+async def main() -> None:
 
     # Perform database initialization
     await initialization()
@@ -34,17 +32,16 @@ async def main():
     signal.signal(signal.SIGINT, stop_server)
     signal.signal(signal.SIGTERM, stop_server)
 
-    # Start the server process
-    server = subprocess.Popen([
+    global server
+
+    # Run the server process until stopped
+    server = subprocess.run([
         "fastapi", "run",
         "--host", str(settings.fastapi_host),
         "--port", str(settings.fastapi_port),
         "--workers", str(settings.fastapi_workers),
         "api.py"
     ])
-
-    # Wait for the server process to stop
-    server.wait()
 
     # Perform database cleanup
     await cleanup()
