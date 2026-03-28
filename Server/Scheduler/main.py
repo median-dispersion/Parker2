@@ -34,14 +34,17 @@ async def main() -> None:
 
     global server
 
-    # Run the server process until stopped
-    server = subprocess.run([
+    # Start the server process
+    server = subprocess.Popen([
         "fastapi", "run",
         "--host", str(settings.fastapi_host),
         "--port", str(settings.fastapi_port),
         "--workers", str(settings.fastapi_workers),
         "api.py"
     ])
+
+    # Wait for the server process to stop
+    server.wait()
 
     # Perform database cleanup
     await cleanup()

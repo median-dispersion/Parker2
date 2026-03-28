@@ -8,3 +8,7 @@ Server/Docker
 # Ignore all temporary python files and directories
 __venv__
 __pycache__
+
+# Ignore temporary build artifacts
+Client/Search/Build
+Client/Search/main
