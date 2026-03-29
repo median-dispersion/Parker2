@@ -49,9 +49,9 @@ async def initialization() -> None:
                         end_index
                     )
                     SELECT
-                        COALESCE(last_search.end_index, 0) AS start_index,
-                        COALESCE(last_search.end_index, 0) AS next_index,
-                        COALESCE(last_search.end_index, 0) AS end_index
+                        COALESCE(last_search.end_index, 1) AS start_index,
+                        COALESCE(last_search.end_index, 1) AS next_index,
+                        COALESCE(last_search.end_index, 1) AS end_index
                     FROM (
                         SELECT end_index
                         FROM searches

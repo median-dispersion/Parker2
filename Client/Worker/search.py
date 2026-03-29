@@ -73,7 +73,7 @@ class Search(threading.Thread):
             # Wait for the search process to finish
             self._process.wait()
 
-            # Only the set the completed flag to true if the search exited without errors
+            # Only set the completed flag to true if the search exited without errors
             if self._process.returncode == 0:
                 with self._lock:
                     self._completed = True
@@ -119,14 +119,8 @@ class Search(threading.Thread):
         # Acquire the thread lock
         with self._lock:
 
-            # Make a copy of the results
-            results = self._results.copy()
-
-            # Clear the results
-            self._results.clear()
-
-        # Return the list of results
-        return results
+            # Return a copy of the results
+            return self._results.copy()
 
     # =============================================================================================
     # Get the completion state
