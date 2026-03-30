@@ -25,5 +25,9 @@ class Settings(BaseSettings):
     def server_url(self) -> str:
         return f"{self.server_protocol}://{self.server_host}:{self.server_port}"
 
+    # Client settings
+    client_idle_cpu_cores: int = 1
+    client_name: str = "Parker2-Client"
+
 # Create settings instance
 settings = Settings()

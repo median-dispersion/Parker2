@@ -1,7 +1,6 @@
 import threading
 from settings import settings
 import requests
-from time import sleep
 from uuid import UUID
 from search import Search
 
@@ -43,8 +42,14 @@ class Client(threading.Thread):
         body: str
     ) -> dict | None:
 
-        # Loop until a request is successful or the maximum number of attempts is reached
-        for attempt in range(settings.request_attempts):
+        # Number of request attempts
+        attempt = 0
+
+        # Loop while not stopped, until a request is successful or the maximum number of attempts is reached
+        while not self._stop_event.is_set() and attempt < settings.request_attempts:
+
+            # Increase the number of request attempts
+            attempt += 1
 
             try:
 
@@ -69,10 +74,11 @@ class Client(threading.Thread):
                 print(f"{self._name}: {exception}")
 
                 # Delay the next request attempt
-                sleep(settings.request_attempt_delay_seconds)
+                self._stop_event.wait(timeout=settings.request_attempt_delay_seconds)
 
         # Raise an exception if the maximum number of request attempts was reached
-        raise RuntimeError("Maximum number of request attempts was reached!")
+        if (attempt >= settings.request_attempts):
+            raise RuntimeError("Maximum number of request attempts was reached!")
 
     # =============================================================================================
     # Register the client
@@ -225,8 +231,8 @@ class Client(threading.Thread):
                         # Update the job
                         self._update_job()
 
-                        # Delay the next job update by the provided update interval
-                        sleep(self._job["update_seconds"])
+                        # Wait until the next job update or the search thread end
+                        self._search_thread.wait(self._job["update_seconds"])
 
                     # Get the search results
                     self._job["results"] = self._search_thread.results
@@ -266,11 +272,18 @@ class Client(threading.Thread):
     # =============================================================================================
     def stop(self) -> None:
 
-        # Set the stop event
-        self._stop_event.set()
-
         # Check if the search thread is set
         if self._search_thread is not None:
 
             # Stop the search thread
             self._search_thread.stop()
+
+        # Set the stop event
+        self._stop_event.set()
+
+    # =============================================================================================
+    # Return the client name
+    # =============================================================================================
+    @property
+    def name(self) -> str:
+        return self._name

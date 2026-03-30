@@ -24,6 +24,7 @@ class Search(threading.Thread):
         self._start_index = start_index
         self._current_index = start_index
         self._end_index = end_index
+        self._stop_event = threading.Event()
         self._lock = threading.Lock()
         self._process = None
         self._results = []
@@ -87,6 +88,9 @@ class Search(threading.Thread):
             # Print the exception
             print(f"{self._name}: {exception}")
 
+        # Set the stop event
+        self._stop_event.set()
+
         # Capture the execution time
         with self._lock:
             self._execution_time = time.time() - self._start_time
@@ -101,6 +105,20 @@ class Search(threading.Thread):
 
             # Kill the search process
             self._process.kill()
+
+        # Set the stop event
+        self._stop_event.set()
+
+    # =============================================================================================
+    # Wait for a specified amount of time or until the search is stopped
+    # =============================================================================================
+    def wait(
+        self,
+        time_seconds: int
+    ) -> None:
+
+        # Wait for the specified time or until the stop event is set
+        self._stop_event.wait(timeout=time_seconds)
 
     # =============================================================================================
     # Get the current index
