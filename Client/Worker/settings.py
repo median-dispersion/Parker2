@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     # Search settings
     search_binary_path: Path = "../Search/main"
     search_duration_seconds: int = 300
+    search_scaling_factor: float = 10.0
 
     # Request settings
     request_attempts: int = 10

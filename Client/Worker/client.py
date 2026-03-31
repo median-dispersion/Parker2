@@ -201,6 +201,31 @@ class Client(threading.Thread):
             self._request("POST", url, body)
 
     # =============================================================================================
+    # Get the size of the next job
+    # =============================================================================================
+    def _get_next_job_size(self) -> None:
+
+        # Get the job size of the completed job
+        completed_job_size = self._job["end_index"] - self._job["start_index"]
+
+        # Calculate the search iterations per second
+        iterations_per_second = completed_job_size / self._search_thread.execution_time
+
+        # Calculate the next job size
+        # Based on a linear approximation of how long the last job took to complete
+        # Limit it to a job size of at least 1
+        calculated_next_job_size = max(round(iterations_per_second * settings.search_duration_seconds), 1)
+
+        # Calculate the next job size by scaling the previous job size
+        # Limit it to a job size of at least 1
+        scaled_next_job_size = max(round(completed_job_size * settings.search_scaling_factor), 1)
+
+        # Pick between the calculated and scale job size witch ever is smaller
+        # This grows early jobs quickly but limits them from exploding
+        # And scales later jobs appropriately allowing them to shrink as well
+        self._next_job_size = min(calculated_next_job_size, scaled_next_job_size)
+
+    # =============================================================================================
     # Run the client
     # =============================================================================================
     def run(self) -> None:
@@ -249,14 +274,8 @@ class Client(threading.Thread):
                     # Complete the job
                     self._complete_job()
 
-                    # Get the job size of the completed job
-                    job_size = self._job["end_index"] - self._job["start_index"]
-
-                    # Calculate the search iterations per second
-                    iterations_per_second = job_size / self._search_thread.execution_time
-
-                    # Scale the next job size accordingly
-                    self._next_job_size = max(round(iterations_per_second * settings.search_duration_seconds), 1)
+                    # Get the size of the next job
+                    self._get_next_job_size()
 
             # If any of the steps fail
             except Exception as exception:
