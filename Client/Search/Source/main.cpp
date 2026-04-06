@@ -1,20 +1,41 @@
-// This is a temporary dummy search!
+#include <cstdint>
+#include <string>
+#include <vector>
+#include <utility>
+#include "PrimeDecomposition.h"
 
-#include <iostream>
-#include <thread>
-#include <chrono>
+using namespace std;
 
-int main() {
+// ================================================================================================
+// Main
+// ================================================================================================
+int main(int, char *argv[]) {
 
-    for (int i = 0; i < 300; i++) {
+    // Get the start and end index of the search range
+    // Maximum value for e = 2⁶⁴-1
+    uint_fast64_t startIndex = stoull(argv[1]);
+    uint_fast64_t endIndex = stoull(argv[2]);
 
-        std::cout << "{\"current_index\":" << i << "}" << std::endl;
+    // Make sure the start index is startIndex ≡ 1 (mod 4)
+    // Maximum value for e = 2⁶⁴-4
+    startIndex += (1 - startIndex % 4 + 4) % 4;
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+    // Loop through every value in the search range where e ≡ 1 (mod 4)
+    for (uint_fast64_t e = startIndex; e < endIndex; e += 4) {
+
+        // Get all prime factors of e² using trial division
+        // Maximum value for e = (2³²-1)²
+        vector<pair<uint_fast64_t, uint_fast64_t>> primeFactors = squaredTrialDivision1mod4(e);
+
+        // Check if there are no valid prime factors for e²
+        if (primeFactors.empty()) {
+
+            // Skip e
+            continue;
+
+        }
 
     }
-
-    std::cout << "{\"result\":{\"a\":1,\"b\":2,\"c\":3,\"d\":4,\"e\":5,\"f\":6,\"g\":7,\"h\":8,\"i\":9}}" << std::endl;
 
     return 0;
 

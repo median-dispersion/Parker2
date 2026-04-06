@@ -5,10 +5,10 @@ OBJECT_DIRECTORY = ./Build
 
 # Compiler
 COMPILER = g++
-COMPILER_FLAGS = -Wall -Wextra -Werror -O3 -march=native -flto -funroll-loops -I$(INCLUDE_DIRECTORY)
+COMPILER_FLAGS = -std=c++20 -Wall -Wextra -Werror -O3 -march=native -flto -funroll-loops -I$(INCLUDE_DIRECTORY)
 
 # Libraries
-LIBRARIES =
+LIBRARIES = -lgmp -lgmpxx
 
 # Files
 SOURCES = $(wildcard $(SOURCE_DIRECTORY)/*.cpp)
