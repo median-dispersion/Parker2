@@ -134,10 +134,10 @@ uint_fast64_t modularExponentiation(
 // Miller-Rabin Primality test (https://cp-algorithms.com/algebra/primality_tests.html)
 // Maximum input value n = 2⁶⁴-1
 // ================================================================================================
-bool millerRabinPrimalityTest(uint_fast64_t n) {
+bool millerRabinPrimalityTest(uint_fast64_t number) {
 
     // Check if the number is less than 2
-    if (n < 2) {
+    if (number < 2) {
 
         // No number less than 2 can be prime
         // Return not prime
@@ -147,51 +147,50 @@ bool millerRabinPrimalityTest(uint_fast64_t n) {
 
     // Check small primes directly witch is faster than using Miller-Rabin
     // Values from https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test#Testing_against_small_sets_of_bases
-    for (uint_fast64_t p : {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37}) {
+    for (uint_fast64_t prime : {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37}) {
 
         // Check if the number is divisible by the prime
-        if (n % p == 0) {
+        if (number % prime == 0) {
 
             // Return true only if the number itself is the prime
-            return n == p;
+            return number == prime;
 
         }
 
     }
 
-    // Initialize d and s for d*2^s
-    uint_fast64_t d = n - 1;
-    uint_fast64_t s = 0;
+    // Initialize the factor and exponent
+    uint_fast64_t factor = number - 1;
+    uint_fast64_t exponent = 0;
 
-    // Loop as long as d is even using a bitwise AND check
-    // This will write n-1 as d*2^2 by factoring out powers of 2
-    while ((d & 1) == 0) {
+    // Loop as long as factor is even using a bitwise AND check
+    while ((factor & 1) == 0) {
 
-        // Divide d by 2 using a right bit shift
-        d >>= 1;
+        // Divide the factor by 2 using a right bit shift
+        factor >>= 1;
 
-        // Increase s
-        s++;
+        // Increase exponent
+        exponent++;
 
     }
 
     // Deterministic set of bases that works for all 64-bit integers
     // Values from https://miller-rabin.appspot.com/
-    for (uint_fast64_t a : {2, 325, 9375, 28178, 450775, 9780504, 1795265022}) {
+    for (uint_fast64_t base : {2, 325, 9375, 28178, 450775, 9780504, 1795265022}) {
 
-        // Check if base is a multiple of n
-        if (a % n == 0) {
+        // Check if the base is a multiple of the number
+        if (base % number == 0) {
 
             // Skip this base
             continue;
 
         }
 
-        // Get x
-        uint_fast64_t x = modularExponentiation(a, d, n);
+        // Get a result
+        uint_fast64_t result = modularExponentiation(base, factor, number);
 
-        // Check if x is 1 or n - 1
-        if (x == 1 || x == n - 1) {
+        // Check if the result is 1 or number - 1
+        if (result == 1 || result == number - 1) {
 
             // Skip this base
             continue;
@@ -201,14 +200,14 @@ bool millerRabinPrimalityTest(uint_fast64_t n) {
         // Flag for checking if the number is a composite
         bool composite = true;
 
-        // Repeat squaring up to s-1 times
-        for (uint_fast64_t r = 1; r < s; r++) {
+        // Repeat squaring up to exponent - 1 times
+        for (uint_fast64_t repeat = 1; repeat < exponent; repeat++) {
 
-            // Square x modulus n
-            x = modularMultiplication(x, x, n);
+            // Square the result using modular multiplication
+            result = modularMultiplication(result, result, number);
 
-            // Check if x is n-1
-            if (x == n - 1) {
+            // Check if the result is number - 1
+            if (result == number - 1) {
 
                 // Set the composite flag to false
                 composite = false;
