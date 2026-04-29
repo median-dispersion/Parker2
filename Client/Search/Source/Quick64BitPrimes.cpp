@@ -326,7 +326,7 @@ namespace q64bp {
                 // Use trial division to break down the number into prime factors
                 // Trial division is generally faster for small numbers up to around 30 million
                 // The trial division will return false if it finds any factor that is not in the form factor ≡ 1 (mod 4)
-                // In that case retrun no valid prime factors
+                // In that case return no valid prime factors
                 if (!trialDivision(factor, primes)) { return {}; }
 
                 // Continue with the next factor

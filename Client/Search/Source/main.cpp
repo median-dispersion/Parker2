@@ -2,6 +2,7 @@
 #include <string>
 #include "Quick64BitPrimes.hpp" // Modified from https://github.com/median-dispersion/Quick-64-Bit-Primes
 #include <vector>
+#include "SumOfTwoSquaresTheorem.hpp"
 
 // ================================================================================================
 // Main
@@ -33,6 +34,14 @@ int main(int, char *argv[]) {
 
         // If no valid prime factors where found continue with the next value of e
         if (primeFactors.empty()) { continue; }
+
+        // Get the number of unique ways e² can be represented as the sum of two squares using the sum of two squares theorem
+        // Maximum value for e = 2⁶⁴-1
+        std::uint_fast64_t numberOfUniqueSumsOfSquares = sumOfTwoSquaresTheorem(primeFactors);
+
+        // If there are less than four unique ways e² can be represented as the sum of two squares
+        // Continue with the next value for e
+        if (numberOfUniqueSumsOfSquares < 4) { continue; }
 
     }
 
