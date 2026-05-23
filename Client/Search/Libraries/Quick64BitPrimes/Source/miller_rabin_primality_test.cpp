@@ -41,7 +41,7 @@ namespace q64bp {
             factor >>= 1;
 
             // Increase exponent
-            exponent++;
+            ++exponent;
 
         }
 
@@ -67,7 +67,7 @@ namespace q64bp {
 
             // Loop up to exponent - 1 times
             // Or until the result == number - 1
-            for (ui64 loop = 1; loop < exponent && result != number - 1; loop++) {
+            for (ui64 loop = 1; loop < exponent && result != number - 1; ++loop) {
 
                 // Square the result using modular multiplication
                 // If the result becomes number - 1, the base cant be used to prove the number is a composite

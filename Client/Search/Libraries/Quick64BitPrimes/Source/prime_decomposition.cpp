@@ -110,7 +110,7 @@ namespace q64bp {
         // This multiplied with a safety factor of 8
         // So for 99.999..% of the time the algorithm will return a valid solution
         // And for the astronomically small chance that it fails it limits the number of attempts instead of hanging forever
-        for (ui64 attempt = 0; attempt < 256; attempt++) {
+        for (ui64 attempt = 0; attempt < 256; ++attempt) {
 
             // Initialize the factor as one
             ui64 factor = 1;
@@ -126,7 +126,7 @@ namespace q64bp {
             ui64 constant = anchor(rng);
 
             // Skip constant = number - 2, by adding one to the constant
-            if (constant == number - 2) { constant++; }
+            if (constant == number - 2) { ++constant; }
 
             // Repeatedly perform races between the tortoise and the hare
             // Doubling the race length each time
@@ -139,7 +139,7 @@ namespace q64bp {
                 tortoise = hare;
 
                 // Let the hare take as many steps as the race is long (cheater!)
-                for (ui64 step = 0; step < race_length; step++) {
+                for (ui64 step = 0; step < race_length; ++step) {
 
                     // Advance the position of the hare
                     hare = advance_position(hare, constant, number);
@@ -160,7 +160,7 @@ namespace q64bp {
 
                     // Let the hare take as steps many as the sprint is long
                     // Or as many steps as are remaining in the race
-                    for (ui64 step = 0; step < sprint_length && step < race_length - sprint; step++) {
+                    for (ui64 step = 0; step < sprint_length && step < race_length - sprint; ++step) {
 
                         // Advance the position of the hare
                         hare = advance_position(hare, constant, number);
@@ -192,7 +192,7 @@ namespace q64bp {
                 // He takes as many steps as this final race is long, or until a factor has been found
                 // During testing the maximum length of the final race reached was 128
                 // This multiplied with a safety factor of 8
-                for (ui64 step = 0; step < 1024 && factor == 1; step++) {
+                for (ui64 step = 0; step < 1024 && factor == 1; ++step) {
 
                     // Advance the position of the fox
                     // The fox is only doing on step at a time instead of sprinting like tha hare did
@@ -345,7 +345,7 @@ namespace q64bp {
                 exponent += 2;
 
                 // Continue with the next prime in the list
-                index++;
+                ++index;
 
             }
 

@@ -86,7 +86,7 @@ namespace q64bp {
             factor >>= 1;
 
             // Increase exponent
-            exponent++;
+            ++exponent;
 
         }
 
@@ -100,7 +100,7 @@ namespace q64bp {
         while (
             quadratic_non_residue < prime &&
             modular_exponentiation(quadratic_non_residue, (prime - 1) >> 1, prime) != prime - 1
-        ) { quadratic_non_residue++; }
+        ) { ++quadratic_non_residue; }
 
         // Check if no quadratic non-residue was found and throw an exception
         // With properly guarded inputs this will never happen and should be mathematically impossible
@@ -124,7 +124,7 @@ namespace q64bp {
             while (temporary_factor != 1 && new_exponent + 1 < current_exponent) {
 
                 temporary_factor = modular_multiplication(temporary_factor, temporary_factor, prime);
-                new_exponent++;
+                ++new_exponent;
 
             }
 
