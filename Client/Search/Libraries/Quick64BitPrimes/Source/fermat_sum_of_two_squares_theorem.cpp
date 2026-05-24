@@ -2,7 +2,6 @@
 #include "Quick64BitPrimes/types.hpp"
 #include "Quick64BitPrimes/miller_rabin_primality_test.hpp"
 #include "Quick64BitPrimes/tonelli_shanks_algorithm.hpp"
-#include <optional>
 #include <utility>
 
 namespace q64bp {
@@ -55,16 +54,16 @@ namespace q64bp {
     // ============================================================================================
     // Get Fermat's sum of two squares representation of a prime (x² + y² = p)
     // ============================================================================================
-    std::optional<std::pair<ui64, ui64>> fermat_sum_of_two_squares_theorem(ui64 prime) {
+    std::pair<ui64, ui64> fermat_sum_of_two_squares_theorem(ui64 prime) {
 
-        // If the provided value is not prime return no valid solutions
-        if (!miller_rabin_primality_test(prime)) { return {}; }
+        // Any prime passed to this function must be
+        // prime == must be prime
+        // prime == 2 or prime % 4 == 1
+        // prime % 4 != 3
+        // Otherwise it is unsafe to use!
 
         // If the prime is two return the trivial solutions
-        if (prime == 2) { return {{1, 1}}; }
-
-        // If the prime in not in the form prime ≡ 1 (mod 4) return no valid solutions
-        if ((prime & 3) != 1) { return {}; }
+        if (prime == 2) { return {1, 1}; }
 
         // Set x to the prime
         ui64 x = prime;
@@ -90,7 +89,7 @@ namespace q64bp {
         }
 
         // Return the result
-        return {{integer_square_root(prime - y * y), y}};
+        return {integer_square_root(prime - y * y), y};
 
     }
 
