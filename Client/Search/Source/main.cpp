@@ -3,11 +3,8 @@
 #include "Quick64BitPrimes/Quick64BitPrimes.hpp" // Modified from https://github.com/median-dispersion/Quick-64-Bit-Primes
 #include <vector>
 #include "sum_of_two_squares_theorem.hpp"
-#include <unordered_set>
 #include <utility>
-#include "pair_hash.hpp"
 #include <stdexcept>
-#include <algorithm>
 
 int main(int, char *argv[]) {
 
@@ -53,22 +50,16 @@ int main(int, char *argv[]) {
         // Manually add 2¹ as a prime factor to complete the set of prime factor for 2e²
         prime_factors.emplace_back(2, 1);
 
-        // Get the sum of two squares representations of 2e² as a unordered set of square root pairs
-        // It uses the Brahmagupta-Fibonacci identity for this and is NOT safe for all values of e that fit in an unsigned 64 bit integer!
-        // View comments in brahmagupta_fibonacci_identity.cpp for more info
-        // Maximum value for e = √(((2⁶⁴-1)²)/2)
-        std::unordered_set<std::pair<ui64, ui64>, PairHash> unordered_square_root_pairs = sum_of_two_squares_representations(prime_factors);
+        // Get all ordered and unique sum of two squares representations of 2e² as a list of square root pairs
+        std::vector<std::pair<ui64, ui64>> square_root_pairs = ordered_unique_sum_of_two_squares_representations<ui64>(prime_factors);
 
         // Check if the predicted and actually number of sum of two squares representations match
         // e² and 2e² should have the same number of representations because a prime factor of 2 does not contribute any new representations
+        // With the exception that list will contain one less representation because one of the pairs is made up of duplicate values
+        // This is why it compares against number_of_unique_sum_of_two_squares - 1
+        // See sum_of_two_squares_theorem.hpp for more info about this
         // If the don't match throw an exception
-        if (unordered_square_root_pairs.size() != number_of_unique_sum_of_two_squares) { throw std::logic_error("Incorrect number of sum of two squares representations!"); }
-
-        // Convert the unordered set of square root pairs of 2e² into a vector
-        std::vector<std::pair<ui64, ui64>> square_root_pairs(unordered_square_root_pairs.begin(), unordered_square_root_pairs.end());
-
-        // Sort the square root pairs of 2e²
-        std::sort(square_root_pairs.begin(), square_root_pairs.end());
+        if (square_root_pairs.size() != number_of_unique_sum_of_two_squares - 1) { throw std::logic_error("Incorrect number of sum of two squares representations!"); }
 
     }
 
