@@ -5,7 +5,7 @@
 #include <algorithm>
 
 // ================================================================================================
-// Overload the << operator to support printing of ui128 values
+// Overload the << operator to support printing of unsigned 128-bit integers
 // ================================================================================================
 #ifdef PARKER2_UI128_AVAILABLE
 std::ostream& operator<<(std::ostream& stream, ui128 value) {

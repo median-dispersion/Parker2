@@ -1,8 +1,8 @@
 #ifndef PARKER2_HASH_HPP
 #define PARKER2_HASH_HPP
 
-#include <functional>
 #include "types.hpp"
+#include <functional>
 #include <cstddef>
 #include <utility>
 
@@ -10,7 +10,7 @@
 // Custom specialization for hashing unsigned 128-bit integers
 // ================================================================================================
 #ifdef PARKER2_UI128_AVAILABLE
-template<>
+template <>
 struct std::hash<ui128> {
 
     // Customize the "()" operator

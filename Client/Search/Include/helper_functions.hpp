@@ -1,17 +1,17 @@
 #ifndef PARKER2_HELPER_FUNCTIONS_HPP
 #define PARKER2_HELPER_FUNCTIONS_HPP
 
-#include <type_traits>
 #include "types.hpp"
+#include <type_traits>
 #include <iostream>
 
 // ================================================================================================
-// Helper function for casting different integer types into each other
+// A helper function for casting non standard integer types
 // This is mainly intended for casting unsigned 128-bit integers into GMP integers
-// But obviously also works for all standard numeric types
+// But obviously also works for most other integer types
 // ================================================================================================
 template <typename IntegerType1, typename IntegerType2>
-IntegerType1 helper_cast(const IntegerType2& value) {
+IntegerType1 integer_cast(const IntegerType2& value) {
 
     // If the target type is a GMP integer and the source type is an unsigned 128-bit integer
     // And unsigned 128-bit integers are available
@@ -43,7 +43,7 @@ IntegerType1 helper_cast(const IntegerType2& value) {
 }
 
 // ================================================================================================
-// Overload the << operator to support printing of ui128 values
+// Overload the << operator to support printing of unsigned 128-bit integers
 // ================================================================================================
 #ifdef PARKER2_UI128_AVAILABLE
 std::ostream& operator<<(std::ostream& stream, ui128 value);

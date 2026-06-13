@@ -5,9 +5,9 @@
 #include "sum_of_two_squares_theorem.hpp"
 #include <utility>
 #include <stdexcept>
+#include "helper_functions.hpp"
 #include <cstddef>
 #include <iostream>
-#include "helper_functions.hpp"
 
 // ================================================================================================
 // Search loop
@@ -49,6 +49,12 @@ void search(
         prime_factors.emplace_back(2, 1);
 
         // Get all ordered and unique sum of two squares representations of 2e² as a list of square root pairs
+        // When using unsigned 64-bit integers this function is NOT safe for all values of e!
+        // For more information view the comments in sum_of_two_squares_theorem.hpp and brahmagupta_fibonacci_identity.hpp
+        // However because it is a template function unsigned 128-bit integer can be used making it safe for all values of e
+        // Witch integer type is used is decided by the end index of the search range in the main() function
+        // Maximum value for e = √(((2⁶⁴-1)²)/2) if using unsigned 64-bit integers
+        // Maximum value for e = √(((2¹²⁸-1)²)/2) if using unsigned 128-bit integers
         std::vector<std::pair<ui64, ui64>> square_root_pairs = ordered_unique_sum_of_two_squares_representations<ui64>(prime_factors);
 
         // Check if the predicted and actually number of sum of two squares representations match
@@ -61,7 +67,7 @@ void search(
 
         // Calculate e² directly
         // Casting it into a wide enough integer type to perfrom all calculations safely
-        IntegerType e_squared = helper_cast<IntegerType>(e) * e;
+        IntegerType e_squared = integer_cast<IntegerType>(e) * e;
 
         // Calculate the magic sum, i.e. 3e²
         IntegerType magic_sum = 3 * e_squared;
@@ -81,12 +87,12 @@ void search(
 
                     // Cast the pair values into a wide enough integer type to perfrom calculations safely
                     // This also gives them their appropriate variable names
-                    IntegerType a = helper_cast<IntegerType>(square_root_pairs[pair_2].first);
-                    IntegerType b = helper_cast<IntegerType>(square_root_pairs[pair_1].second);
-                    IntegerType c = helper_cast<IntegerType>(square_root_pairs[pair_4].first);
-                    IntegerType g = helper_cast<IntegerType>(square_root_pairs[pair_4].second);
-                    IntegerType h = helper_cast<IntegerType>(square_root_pairs[pair_1].first);
-                    IntegerType i = helper_cast<IntegerType>(square_root_pairs[pair_2].second);
+                    IntegerType a = integer_cast<IntegerType>(square_root_pairs[pair_2].first);
+                    IntegerType b = integer_cast<IntegerType>(square_root_pairs[pair_1].second);
+                    IntegerType c = integer_cast<IntegerType>(square_root_pairs[pair_4].first);
+                    IntegerType g = integer_cast<IntegerType>(square_root_pairs[pair_4].second);
+                    IntegerType h = integer_cast<IntegerType>(square_root_pairs[pair_1].first);
+                    IntegerType i = integer_cast<IntegerType>(square_root_pairs[pair_2].second);
 
                     // Square the magic square values
                     IntegerType a_squared = a * a;
@@ -124,8 +130,8 @@ void search(
 
                         // Cast the remaining pair values into a wide enough integer type to perfrom calculations safely
                         // This also gives them their appropriate variable names
-                        IntegerType d = helper_cast<IntegerType>(square_root_pairs[pair_3].second);
-                        IntegerType f = helper_cast<IntegerType>(square_root_pairs[pair_3].first);
+                        IntegerType d = integer_cast<IntegerType>(square_root_pairs[pair_3].second);
+                        IntegerType f = integer_cast<IntegerType>(square_root_pairs[pair_3].first);
 
                         // Square the remaining magic square values
                         IntegerType d_squared = d * d;
@@ -178,6 +184,7 @@ int main(int, char *argv[]) {
     if (start_index < 5) { start_index = 5; }
 
     // Make sure the start index is in the form start_index ≡ 1 (mod 4)
+    // If it is not increase the start index to the next value that is in the form 1 (mod 4)
     // Maximum value for e = 2⁶⁴-4
     start_index += (1 - start_index % 4 + 4) % 4;
 
