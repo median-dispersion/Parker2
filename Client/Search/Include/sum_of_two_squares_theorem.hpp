@@ -9,7 +9,7 @@
 #include "hash.hpp"
 #include "Quick64BitPrimes/fermat_sum_of_two_squares_theorem.hpp"
 #include "brahmagupta_fibonacci_identity.hpp"
-#include <iterator>
+#include <vector>
 #include <algorithm>
 #include <stdexcept>
 
@@ -88,7 +88,7 @@ std::unordered_set<std::pair<IntegerType, IntegerType>, PairHash<IntegerType>> u
 
     // Loop through every prime factor of the number, starting from the second prime factor
     // This is because the representation of the first prime factor was already computed in the inital step
-    for (auto prime_factor = std::next(prime_factors.begin()); prime_factor != prime_factors.end(); ++prime_factor) {
+    for (auto prime_factor = prime_factors.begin() + 1; prime_factor != prime_factors.end(); ++prime_factor) {
 
         // Get the sum of two squares representations of the current prime factor
         std::unordered_set<std::pair<IntegerType, IntegerType>, PairHash<IntegerType>> prime_factor_square_root_pairs = prime_factor_sum_of_two_squares_representations<IntegerType>(*prime_factor);

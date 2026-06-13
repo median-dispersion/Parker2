@@ -3,7 +3,6 @@
 
 #include <unordered_set>
 #include <utility>
-#include "types.hpp"
 #include "hash.hpp"
 #include <algorithm>
 
@@ -16,7 +15,7 @@ std::unordered_set<std::pair<IntegerType, IntegerType>, PairHash<IntegerType>> b
     const std::pair<IntegerType, IntegerType>& square_roots_2
 ) {
 
-    // TLDR: When using unsigned 64-bit integers, this function is only safe for values of e up to √(((2⁶⁴-1)²)/2) or ~1.3*10¹⁹ or 13'043'817'825'332'782'211
+    // TLDR: When using unsigned 64-bit integers, this function is only safe for values of e up to √(((2⁶⁴-1)²)/2) or ~1.3*10¹⁸ or 13'043'817'825'332'782'211
     // For any value larger than that, unsigned 128-bit integers can be used through the templating option
 
     // Long explanation:

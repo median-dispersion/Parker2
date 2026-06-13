@@ -1,14 +1,15 @@
 #ifndef PARKER2_HASH_HPP
 #define PARKER2_HASH_HPP
 
+#include <functional>
+#include "types.hpp"
 #include <cstddef>
 #include <utility>
-#include "types.hpp"
-#include <functional>
 
 // ================================================================================================
 // Custom specialization for hashing unsigned 128-bit integers
 // ================================================================================================
+#ifdef PARKER2_UI128_AVAILABLE
 template<>
 struct std::hash<ui128> {
 
@@ -29,6 +30,7 @@ struct std::hash<ui128> {
     }
 
 };
+#endif
 
 // ================================================================================================
 // Templated pair hashing function

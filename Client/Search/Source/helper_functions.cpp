@@ -1,15 +1,13 @@
-#include "iostream_ui128.hpp"
+#include "helper_functions.hpp"
 #include "types.hpp"
 #include <iostream>
 #include <string>
 #include <algorithm>
 
-// Check if the ui128 type is available
-#ifdef PARKER2_UI128_AVAILABLE
-
 // ================================================================================================
 // Overload the << operator to support printing of ui128 values
 // ================================================================================================
+#ifdef PARKER2_UI128_AVAILABLE
 std::ostream& operator<<(std::ostream& stream, ui128 value) {
 
     // If the value is zero print "0"
@@ -36,5 +34,4 @@ std::ostream& operator<<(std::ostream& stream, ui128 value) {
     return stream << string;
 
 }
-
 #endif

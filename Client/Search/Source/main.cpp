@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <cstddef>
 #include <iostream>
-#include "iostream_ui128.hpp"
+#include "helper_functions.hpp"
 
 // ================================================================================================
 // Search loop
@@ -61,7 +61,7 @@ void search(
 
         // Calculate e² directly
         // Casting it into a wide enough integer type to perfrom all calculations safely
-        IntegerType e_squared = static_cast<IntegerType>(e) * e;
+        IntegerType e_squared = helper_cast<IntegerType>(e) * e;
 
         // Calculate the magic sum, i.e. 3e²
         IntegerType magic_sum = 3 * e_squared;
@@ -79,14 +79,14 @@ void search(
             for (std::size_t pair_2 = pair_1 + 1; pair_2 < square_root_pairs.size() - 2; ++pair_2) {
                 for (std::size_t pair_4 = pair_2 + 2; pair_4 < square_root_pairs.size(); ++pair_4) {
 
-                    // Implicitly cast the pair values into a wide enough integer type to perfrom calculations safely
+                    // Cast the pair values into a wide enough integer type to perfrom calculations safely
                     // This also gives them their appropriate variable names
-                    IntegerType a = square_root_pairs[pair_2].first;
-                    IntegerType b = square_root_pairs[pair_1].second;
-                    IntegerType c = square_root_pairs[pair_4].first;
-                    IntegerType g = square_root_pairs[pair_4].second;
-                    IntegerType h = square_root_pairs[pair_1].first;
-                    IntegerType i = square_root_pairs[pair_2].second;
+                    IntegerType a = helper_cast<IntegerType>(square_root_pairs[pair_2].first);
+                    IntegerType b = helper_cast<IntegerType>(square_root_pairs[pair_1].second);
+                    IntegerType c = helper_cast<IntegerType>(square_root_pairs[pair_4].first);
+                    IntegerType g = helper_cast<IntegerType>(square_root_pairs[pair_4].second);
+                    IntegerType h = helper_cast<IntegerType>(square_root_pairs[pair_1].first);
+                    IntegerType i = helper_cast<IntegerType>(square_root_pairs[pair_2].second);
 
                     // Square the magic square values
                     IntegerType a_squared = a * a;
@@ -122,10 +122,10 @@ void search(
                     // Loop through all possible combinations fro the last pair
                     for (std::size_t pair_3 = pair_2 + 1; pair_3 < pair_4; ++pair_3) {
 
-                        // Implicitly cast the remaining pair values into a wide enough integer type to perfrom calculations safely
+                        // Cast the remaining pair values into a wide enough integer type to perfrom calculations safely
                         // This also gives them their appropriate variable names
-                        IntegerType d = square_root_pairs[pair_3].second;
-                        IntegerType f = square_root_pairs[pair_3].first;
+                        IntegerType d = helper_cast<IntegerType>(square_root_pairs[pair_3].second);
+                        IntegerType f = helper_cast<IntegerType>(square_root_pairs[pair_3].first);
 
                         // Square the remaining magic square values
                         IntegerType d_squared = d * d;
