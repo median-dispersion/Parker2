@@ -12,7 +12,7 @@
 // ================================================================================================
 // Search loop
 // ================================================================================================
-template <typename IntegerType>
+template <typename IntegerType, typename PairType>
 void search(
     ui64 start_index,
     ui64 end_index
@@ -55,7 +55,7 @@ void search(
         // Witch integer type is used is decided by the end index of the search range in the main() function
         // Maximum value for e = √(((2⁶⁴-1)²)/2) if using unsigned 64-bit integers
         // Maximum value for e = √(((2¹²⁸-1)²)/2) if using unsigned 128-bit integers
-        std::vector<std::pair<ui64, ui64>> square_root_pairs = ordered_unique_sum_of_two_squares_representations<ui64>(prime_factors);
+        std::vector<std::pair<PairType, PairType>> square_root_pairs = ordered_unique_sum_of_two_squares_representations<PairType>(prime_factors);
 
         // Check if the predicted and actually number of sum of two squares representations match
         // e² and 2e² should have the same number of representations because a prime factor of 2 does not contribute any new representations
@@ -208,22 +208,53 @@ int main(int, char *argv[]) {
     // And none had any row or columns that summed up to a value larger than 4e²
     // Therefore √((2⁶⁴-1)/4) is safe as the switchover point from using unsigned 64-bit to using unsigned 128-bit or GMP
 
-    // If the search range ends before ~ √((2⁶⁴-1)/4) use unsigned 64-bit integers
+    // If the search range ends before ~ √((2⁶⁴-1)/4) or 2.147*10⁹ use unsigned 64-bit integers
     if (end_index < 2'147'000'000) {
-        search<ui64>(start_index, end_index);
+        search<ui64, ui64>(start_index, end_index);
     }
 
-    // If the search range ends before ~ √((2¹²⁸-1)/4) use unsigned 128-bit integers
+    // If the search range ends before ~ √((2¹²⁸-1)/4) or 9.223*10¹⁸ use unsigned 128-bit integers
     // But only if unsigned 128-bit integers are available, else switch to GMP directly
+    // Also keep using unsigned 64-bit integers for the sum of two squares representations
     #ifdef PARKER2_UI128_AVAILABLE
     else if (end_index < 9'223'000'000'000'000'000) {
-        search<ui128>(start_index, end_index);
+        search<ui128, ui64>(start_index, end_index);
     }
     #endif
 
-    // If the end index of the search range is too large for limited integer types use GMP
+    // If the end index of the search range is too large for limited integer types
     else {
-        search<gmpi>(start_index, end_index);
+
+        // When reaching the upper limits of the unsigend 64-bit integer range
+        // Unsigend 64-bit integers are no longer wide enough for all sum of two squares representations of 2e²
+        // For more information view the comments in sum_of_two_squares_theorem.hpp and brahmagupta_fibonacci_identity.hpp
+        // Therefore an additional switch form using unsigned 64-bit integers to unsigned 128-bit integers is needed
+        // This switch only affects the integer types used in the sum of two squares representations
+        // And not the ones used in the final magic square construction
+
+        // If the search range ends before ~ √(((2⁶⁴-1)²)/2) or 1.304*10¹⁹
+        if (end_index < 13'040'000'000'000'000'000ULL) {
+
+            // Use GMP for the construction of the magic square
+            // And use unsigned 64-bit integers for the sum of two squares representations
+            search<gmpi, ui64>(start_index, end_index);
+
+        // If the end index of the search range is too large
+        // To use unsigned 64-bit integers for the sum of two squares representations
+        } else {
+
+            // Use GMP for the construction of the magic square
+            // And use unsigned 128-bit integer for the sum of two squares representations
+            // But only if unsigned 128-bit integers are available
+            // Else throw an exception if the end index of the search range is too large
+            #ifdef PARKER2_UI128_AVAILABLE
+            search<gmpi, ui128>(start_index, end_index);
+            #else
+            throw std::invalid_argument("The end index of the search range is too large!");
+            #endif
+
+        }
+
     }
 
 }
