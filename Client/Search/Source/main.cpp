@@ -59,15 +59,20 @@ void search(
 
         // Check if the predicted and actually number of sum of two squares representations match
         // e² and 2e² should have the same number of representations because a prime factor of 2 does not contribute any new representations
-        // With the exception that list will contain one less representation because one of the pairs is made up of duplicate values
+        // With the exception that the list will contain one less representation because one of the pairs is made up of duplicate values
         // This is why it compares against number_of_unique_sum_of_two_squares - 1
         // See sum_of_two_squares_theorem.hpp for more info about this
-        // If the don't match throw an exception
+        // If they don't match throw an exception
         if (square_root_pairs.size() != number_of_unique_sum_of_two_squares - 1) { throw std::logic_error("Incorrect number of sum of two squares representations!"); }
 
         // Calculate e² directly
         // Casting it into a wide enough integer type to perfrom all calculations safely
         IntegerType e_squared = integer_cast<IntegerType>(e) * e;
+
+        // Calculate the semi magic sum, i.e. 2e²
+        // This is used for validating the sum of two squares representations
+        // Witch can reduce the number of additions by up to 4 per loop iteration
+        IntegerType semi_magic_sum = 2 * e_squared;
 
         // Calculate the magic sum, i.e. 3e²
         IntegerType magic_sum = 3 * e_squared;
@@ -102,28 +107,32 @@ void search(
                     IntegerType h_squared = h * h;
                     IntegerType i_squared = i * i;
 
-                    // Calculate the sum of the center column and both diagonals of the magic
-                    // All sums must be exactly 3e², i.e. the magic sum
-                    IntegerType column_2 = b_squared + e_squared + h_squared;
-                    IntegerType diagonal_1 = a_squared + e_squared + i_squared;
-                    IntegerType diagonal_2 = c_squared + e_squared + g_squared;
+                    // Calculate the sum of the center column and both diagonals of the magic square, without including e_squared
+                    // Excluding e_squared from the calculations significantly reduces the number of additions per loop, speeding it up
+                    // Not including e_squared means the center column and both diagonals will only be 2e², i.e. the semi magic sum
+                    // This is expected when not adding e_squared and is still enough to validate them
+                    // As long as all sums are exactly 2e², the center column and both diagonals are correct and valid
+                    // Because adding e_squared would make them 3e² witch is the targeted magic sum
+                    IntegerType column_2 = b_squared + h_squared;
+                    IntegerType diagonal_1 = a_squared + i_squared;
+                    IntegerType diagonal_2 = c_squared + g_squared;
 
-                    // Throw an exception if the sums are not equal to the magic sum
+                    // Throw an exception if the sums are not equal to the semi magic sum
                     // This means that the sum of two squares representation failed and returned an incorrect result
                     // This should never be the case unless there is a mistake in the implementation
-                    // This is a guard against implementation mistakes and prevents silent overflow errors
-                    if (column_2 != magic_sum || diagonal_1 != magic_sum || diagonal_2 != magic_sum) {
-                        throw std::logic_error("Incorrect magic sum!");
+                    // This is a guard against implementation mistakes and prevents silent errors
+                    if (column_2 != semi_magic_sum || diagonal_1 != semi_magic_sum || diagonal_2 != semi_magic_sum) {
+                        throw std::logic_error("Sum of two squares representation resulted in an incorrect magic sum!");
                     }
 
                     // Calculate the sum of the top and bottom row of the magic square
-                    IntegerType row_1 = a_squared + b_squared + c_squared;
-                    IntegerType row_3 = g_squared + h_squared + i_squared;
-
                     // If the sums are not equal to the magic sum, continue with the next combination of pairs
                     // This is the main validity check for a magic square of squares
-                    // In the case this check passes, every other check that follows is also very likely to pass!
-                    if (row_1 != magic_sum || row_3 != magic_sum) { continue; }
+                    // In the case that the two checks are passed, every other check that follows is also very likely to pass!
+                    IntegerType row_1 = a_squared + b_squared + c_squared;
+                    if (row_1 != magic_sum) { continue; }
+                    IntegerType row_3 = g_squared + h_squared + i_squared;
+                    if (row_3 != magic_sum) { continue; }
 
                     // Loop through all possible combinations fro the last pair
                     for (std::size_t pair_3 = pair_2 + 1; pair_3 < pair_4; ++pair_3) {
@@ -137,24 +146,28 @@ void search(
                         IntegerType d_squared = d * d;
                         IntegerType f_squared = f * f;
 
-                        // Calculate the sum of the center row of the magic square
-                        // This sum must be exactly 3e², i.e. the magic sum
-                        IntegerType row_2 = d_squared + e_squared + f_squared;
+                        // Calculate the sum of the center row of the magic square, without including e_squared
+                        // Excluding e_squared from the calculation significantly reduces the number of additions per loop, speeding it up
+                        // Not including e_squared means the center row will only be 2e², i.e. the semi magic sum
+                        // This is expected when not adding e_squared and is still enough to validate it
+                        // As long as the sum is exactly 2e², the center row is correct and valid
+                        // Because adding e_squared would make it 3e² witch is the targeted magic sum
+                        IntegerType row_2 = d_squared + f_squared;
 
-                        // Throw an exception if the sum is not equal to the magic sum
+                        // Throw an exception if the sum is not equal to the semi magic sum
                         // This means that the sum of two squares representation failed and returned an incorrect result
                         // This should never be the case unless there is a mistake in the implementation
-                        // This is a guard against implementation mistakes and prevents silent overflow errors
-                        if (row_2 != magic_sum) {
-                            throw std::logic_error("Incorrect magic sum!");
+                        // This is a guard against implementation mistakes and prevents silent errors
+                        if (row_2 != semi_magic_sum) {
+                            throw std::logic_error("Sum of two squares representation resulted in an incorrect magic sum!");
                         }
 
                         // Calculate the sum of the left and right column of the magic square
-                        IntegerType column_1 = a_squared + d_squared + g_squared;
-                        IntegerType column_3 = c_squared + f_squared + i_squared;
-
                         // If the sums are not equal to the magic sum, continue with the next combination of pairs
-                        if (column_1 != magic_sum || column_3 != magic_sum) { continue; }
+                        IntegerType column_1 = a_squared + d_squared + g_squared;
+                        if (column_1 != magic_sum) { continue; }
+                        IntegerType column_3 = c_squared + f_squared + i_squared;
+                        if (column_3 != magic_sum) { continue; }
 
                         // All checks were passed successfully, and a magic square of squares was found!
                         // Immediately print the valid solution as JSON
@@ -205,7 +218,7 @@ int main(int, char *argv[]) {
     // A switchover point of √((2¹²⁸-1)/6) instead of √((2¹²⁸-1)/4) can be used to decide when to switch from using unsigned 128-bit integers to using GMP
     // But I'm relatively confident that 4e² is in fact the largest any row or column can become
     // For search ranges below √((2⁶⁴-1)/4) all values of e have been tested
-    // And none had any row or columns that summed up to a value larger than 4e²
+    // And none had any rows or columns that summed up to a value larger than 4e²
     // Therefore √((2⁶⁴-1)/4) is safe as the switchover point from using unsigned 64-bit to using unsigned 128-bit or GMP
 
     // If the search range ends before ~ √((2⁶⁴-1)/4) or 2.147*10⁹ use unsigned 64-bit integers
