@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <gmpxx.h>
+#include <stdfloat>
 
 // Unsigned 64-bit integer alias
 using ui64 = std::uint64_t;
@@ -15,5 +16,8 @@ using ui128 = __uint128_t;
 
 // GNU Multiple Precision Arithmetic Library integer alias
 using gmpi = mpz_class;
+
+// 64-bit floating-point alias
+using fp64 = std::float64_t;
 
 #endif

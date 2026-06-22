@@ -1,5 +1,7 @@
+#include <chrono>
 #include "types.hpp"
 #include <string>
+#include <iostream>
 #include "Quick64BitPrimes/Quick64BitPrimes.hpp" // Modified from https://github.com/median-dispersion/Quick-64-Bit-Primes
 #include <vector>
 #include "sum_of_two_squares_theorem.hpp"
@@ -7,19 +9,45 @@
 #include <stdexcept>
 #include "helper_functions.hpp"
 #include <cstddef>
-#include <iostream>
+#include <limits>
 
 // ================================================================================================
 // Search loop
 // ================================================================================================
 template <typename IntegerType, typename PairType>
-void search(
+ui64 search(
     ui64 start_index,
     ui64 end_index
 ) {
 
+    // Capture the search start time
+    auto start_time = std::chrono::steady_clock::now();
+
+    // Initialize the last update time
+    auto last_update_time = start_time;
+
+    // Initialize the number of valid solutions found in the search range
+    ui64 solutions_found = 0;
+
     // Loop through every value in the search range where e ≡ 1 (mod 4)
     for (ui64 e = start_index; e < end_index; e += 4) {
+
+        // Get the current time
+        auto current_time = std::chrono::steady_clock::now();
+
+        // Check if the update interval of 60 seconds has been reached
+        if (current_time - last_update_time >= std::chrono::seconds(60)) {
+
+            // Set the last update time to the current time
+            last_update_time = current_time;
+
+            // Get the current run time in seconds
+            fp64 current_run_time_seconds = std::chrono::duration<fp64>(current_time - start_time).count();
+
+            // Print a JSON update message
+            std::cout<<"{\"type\":\"update\",\"current_run_time_seconds\":"<<current_run_time_seconds<<",\"current_index\":"<<e<<"}"<<std::endl;
+
+        }
 
         // If e is a prime continue with the next value of e
         // A prime can not be represented as a sum of two squares in at least four unique ways
@@ -173,6 +201,17 @@ void search(
                         // Immediately print the valid solution as JSON
                         std::cout<<"{\"type\":\"solution\",\"a\":"<<a<<",\"b\":"<<b<<",\"c\":"<<c<<",\"d\":"<<d<<",\"e\":"<<e<<",\"f\":"<<f<<",\"g\":"<<g<<",\"h\":"<<h<<",\"i\":"<<i<<"}"<<std::endl;
 
+                        // Prevent overflows in the number of found solutions
+                        // Finding 2⁶⁴-1 valid solutions in a given search range is EXTREMELY unlikely!
+                        // And is indicative an implementation mistake
+                        // Throw an exception if the number of found solutions is equal to 2⁶⁴-1
+                        if (solutions_found == std::numeric_limits<ui64>::max()) {
+                            throw std::overflow_error("Found to many solutions!");
+                        }
+
+                        // Increase the number of found solutions by one
+                        ++solutions_found;
+
                     }
 
                 }
@@ -181,6 +220,9 @@ void search(
 
     }
 
+    // Return the number of found solutions
+    return solutions_found;
+
 }
 
 // ================================================================================================
@@ -188,10 +230,19 @@ void search(
 // ================================================================================================
 int main(int, char *argv[]) {
 
+    // Capture the start time
+    auto start_time = std::chrono::steady_clock::now();
+
     // Get the start and end index of the search range
     // Maximum value for e = 2⁶⁴-1
     ui64 start_index = std::stoull(argv[1]);
     ui64 end_index = std::stoull(argv[2]);
+
+    // Set the print style of floating point values to a fixed number of 5 decimal places
+    std::cout << std::fixed << std::setprecision(5);
+
+    // Print the JSON initialization message
+    std::cout<<"{\"type\":\"initialization\",\"start_index\":"<<start_index<<",\"end_index\":"<<end_index<<"}"<<std::endl;
 
     // Make sure the start index is at least 5
     if (start_index < 5) { start_index = 5; }
@@ -200,6 +251,9 @@ int main(int, char *argv[]) {
     // If it is not increase the start index to the next value that is in the form 1 (mod 4)
     // Maximum value for e = 2⁶⁴-4
     start_index += (1 - start_index % 4 + 4) % 4;
+
+    // Initialize the number of solutions found in the search range
+    ui64 solutions_found = 0;
 
     // When the main search loop tries to construct a potential magic square of squares
     // The top and bottom row as well as the left and right column could become as large as 4e² while going through all pair combinations
@@ -223,7 +277,7 @@ int main(int, char *argv[]) {
 
     // If the search range ends before ~ √((2⁶⁴-1)/4) or 2.147*10⁹ use unsigned 64-bit integers
     if (end_index < 2'147'000'000) {
-        search<ui64, ui64>(start_index, end_index);
+        solutions_found = search<ui64, ui64>(start_index, end_index);
     }
 
     // If the search range ends before ~ √((2¹²⁸-1)/4) or 9.223*10¹⁸ use unsigned 128-bit integers
@@ -231,7 +285,7 @@ int main(int, char *argv[]) {
     // Also keep using unsigned 64-bit integers for the sum of two squares representations
     #ifdef PARKER2_UI128_AVAILABLE
     else if (end_index < 9'223'000'000'000'000'000) {
-        search<ui128, ui64>(start_index, end_index);
+        solutions_found = search<ui128, ui64>(start_index, end_index);
     }
     #endif
 
@@ -250,7 +304,7 @@ int main(int, char *argv[]) {
 
             // Use GMP for the construction of the magic square
             // And use unsigned 64-bit integers for the sum of two squares representations
-            search<gmpi, ui64>(start_index, end_index);
+            solutions_found = search<gmpi, ui64>(start_index, end_index);
 
         // If the end index of the search range is too large
         // To use unsigned 64-bit integers for the sum of two squares representations
@@ -261,7 +315,7 @@ int main(int, char *argv[]) {
             // But only if unsigned 128-bit integers are available
             // Else throw an exception if the end index of the search range is too large
             #ifdef PARKER2_UI128_AVAILABLE
-            search<gmpi, ui128>(start_index, end_index);
+            solutions_found = search<gmpi, ui128>(start_index, end_index);
             #else
             throw std::invalid_argument("The end index of the search range is too large!");
             #endif
@@ -269,5 +323,17 @@ int main(int, char *argv[]) {
         }
 
     }
+
+    // Capture the end time
+    auto end_time = std::chrono::steady_clock::now();
+
+    // Get the total execution time in seconds
+    fp64 total_execution_time_seconds = std::chrono::duration<fp64>(end_time - start_time).count();
+
+    // Print the final result as a JSON message
+    std::cout<<"{\"type\":\"result\",\"total_execution_time_seconds\":"<<total_execution_time_seconds<<",\"solutions_found\":"<<solutions_found<<"}"<<std::endl;
+
+    // Exit cleanly
+    return 0;
 
 }
