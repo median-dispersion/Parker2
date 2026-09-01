@@ -6,16 +6,15 @@ A magic square of squares is similar to a regular [magic square](https://en.wiki
 
 ## Requirements
 
-This repository was developed and tested in Debian and requires the following tools and dependencies to be installed:
+This repository was developed and tested on Debian and requires the following packages to be installed:
 
-- [Git](https://git-scm.com/)
+- git
 - [Docker](https://www.docker.com/)
-- [Python](https://www.python.org/)
 
 ### Install packages
 
-```bash
-sudo apt-get install git python3-full
+```sh
+sudo apt-get install git
 ```
 
 ### Install Docker
