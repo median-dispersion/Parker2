@@ -1,3 +1,11 @@
 # Ignore temporary build artifacts
 Client/Search/Build
 Client/Search/main
+
+# Ignore temporary python files
+.venv
+__pycache__
+
+# Ignore all environment files except example ones
+.env*
+!.env.example
