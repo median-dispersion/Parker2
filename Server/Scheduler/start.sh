@@ -1,4 +1,4 @@
 #!/bin/sh
 
 # Run gunicorn in ASGI mode
-gunicorn --bind "$SERVER_HOST:$SERVER_PORT" --workers $SERVER_WORKERS --worker-class asgi main:main
+gunicorn --bind "$SCHEDULER_HOST:$SCHEDULER_PORT" --workers $SCHEDULER_WORKERS --worker-class asgi main:main

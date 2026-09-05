@@ -1,4 +1,4 @@
-# Ignore temporary build artifacts
+# Ignore build artifacts
 Client/Search/Build
 Client/Search/main
 
@@ -9,3 +9,6 @@ __pycache__
 # Ignore all environment files except example ones
 .env*
 !.env.example
+
+# Ignore PostgreSQL files
+Server/PostgreSQL
