@@ -1,4 +1,4 @@
-from asgi import asgi
+from wsgi import wsgi
 
-# Set the main ASGI instance
-main = asgi
+# Set the main WSGI instance
+main = wsgi

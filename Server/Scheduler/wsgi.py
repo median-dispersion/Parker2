@@ -1,16 +1,19 @@
-from collections.abc import Callable, Coroutine
+from collections import defaultdict
+from collections.abc import Callable, Iterable
 from http import HTTPStatus
 import json
 from urllib.parse import parse_qs
+from typing import IO
+import traceback
 
-# ASGI class
-class ASGI:
+# WSGI class
+class WSGI:
 
     # =============================================================================================
     # Initialization
     # =============================================================================================
     def __init__(self):
-        self._paths = {}
+        self._paths = defaultdict(dict)
 
     # =============================================================================================
     # Add a GET path
@@ -18,8 +21,8 @@ class ASGI:
     def GET(self, path: str) -> Callable:
 
         # Define a decorator that sets a handler function for the given path and method
-        def decorator(handler: Coroutine):
-            self._paths.setdefault(path, {})["GET"] = handler
+        def decorator(handler: Callable):
+            self._paths[path]["GET"] = handler
 
         # Return the decorator
         return decorator
@@ -30,8 +33,8 @@ class ASGI:
     def POST(self, path: str) -> Callable:
 
         # Define a decorator that sets a handler function for the given path and method
-        def decorator(handler: Coroutine):
-            self._paths.setdefault(path, {})["POST"] = handler
+        def decorator(handler: Callable):
+            self._paths[path]["POST"] = handler
 
         # Return the decorator
         return decorator
@@ -39,16 +42,16 @@ class ASGI:
     # =============================================================================================
     # Only allow request that contain a JSON body
     # =============================================================================================
-    def requires_json_body(self, handler: Coroutine) -> Coroutine:
+    def requires_json_body(self, handler: Callable) -> Callable:
 
         # Define a wrapper function around the handler
-        async def wrapper(request: dict) -> dict | None:
+        def wrapper(request: dict) -> dict | None:
 
             # Bad request response data
             status = HTTPStatus.BAD_REQUEST
             bad_request = {
-                "status": status.value,
-                "body": status.phrase
+                "status": status,
+                "body": f"{status.value} {status.phrase}"
             }
 
             # Get the request headers
@@ -59,10 +62,10 @@ class ASGI:
                 return bad_request
 
             # Get the content type
-            content_type = headers.get("content-type")
+            content_type = headers.get("content_type")
 
             # If there is no content type or the content type is not JSON respond with 400 Bad Request
-            if not content_type or content_type[0] != "application/json":
+            if not content_type or content_type != "application/json":
                 return bad_request
 
             # Get the request body
@@ -81,7 +84,7 @@ class ASGI:
                 return bad_request
 
             # Call the handler function with the parsed body
-            return await handler(request)
+            return handler(request)
 
         # Return the wrapper function
         return wrapper
@@ -89,48 +92,52 @@ class ASGI:
     # =============================================================================================
     # Send a basic HTTP status response
     # =============================================================================================
-    async def _send_status(self, send: Coroutine, status: HTTPStatus):
+    def _send_status(self, start_response: Callable, status: HTTPStatus) -> Iterable:
 
-        # Send response start
-        await send({
-            "type": "http.response.start",
-            "status": status.value
-        })
+        # Construct the status string
+        status_string = f"{status.value} {status.phrase}"
 
-        # Send response body
-        await send({
-            "type": "http.response.body",
-            "body": status.phrase.encode("utf-8")
-        })
+        # Start the response
+        start_response(status_string, [])
+
+        # Return the encoded status body
+        return [status_string.encode("utf-8")]
 
     # =============================================================================================
     # Get the request headers
     # =============================================================================================
-    def _get_headers(self, header_list: list) -> dict | None:
+    def _get_headers(self, environment: dict) -> dict | None:
 
-        # Dictionary of all header
+        # HTTP headers
         headers = {}
 
-        # Loop through all headers in the request
-        for name, value in header_list:
+        # If content type is set add it to the request headers
+        if "CONTENT_TYPE" in environment:
+            headers["content_type"] = environment["CONTENT_TYPE"]
 
-            # Add the decoded header
-            headers.setdefault(name.decode("utf-8").lower(), []).append(value.decode("utf-8"))
+        # If content length is set add it to the request headers
+        if "CONTENT_LENGTH" in environment:
+            headers["content_length"] = environment["CONTENT_LENGTH"]
 
-        # If there are no headers return None
+        # Get all HTTP headers from the WSGI environment
+        for name, value in environment.items():
+            if name.startswith("HTTP_"):
+                headers[name.removeprefix("HTTP_").lower()] = value
+
+        # If there are no request headers return None
         if not headers:
             return None
 
-        # Return all headers
+        # Return the HTTP headers
         return headers
 
     # =============================================================================================
     # Get the request query
     # =============================================================================================
-    def _get_query(self, query_bytes: bytes) -> dict | None:
+    def _get_query(self, query_string: str) -> dict | None:
 
         # Parse the query string
-        query = parse_qs(query_bytes.decode("utf-8"))
+        query = parse_qs(query_string)
 
         # If there are no query arguments return None
         if not query:
@@ -142,130 +149,97 @@ class ASGI:
     # =============================================================================================
     # Get the request body
     # =============================================================================================
-    async def _get_body(self, receive: Coroutine) -> str | None:
+    def _get_body(self, input: IO) -> str | None:
 
-        # Raw request body
-        body = b""
+        # Read and decode the request body
+        body = input.read().decode("utf-8")
 
-        # Loop until no more data is available
-        while True:
-
-            # Receive the event
-            event = await receive()
-
-            # Raise an exception if the event type is not http.request
-            if event["type"] != "http.request":
-                raise NotImplementedError("Event type not supported!")
-
-            # Add the received request body
-            body += event.get("body", b"")
-
-            # Break the loop if no more body data is available
-            if not event.get("more_body", False):
-                break
-
-        # Return None if the body is empty
-        if body == b"":
+        # If the request contains no body return None
+        if not body:
             return None
 
-        # Return the decoded body
-        return body.decode("utf-8")
+        # Return the request body
+        return body
 
     # =============================================================================================
-    # Construct response
+    # Send a response
     # =============================================================================================
-    async def _send_response(self, send: Coroutine, data: dict):
+    def _send_response(self, start_response: Callable, response: dict) -> Iterable:
 
-        # Initialize the response start
-        response_start = {
-            "type": "http.response.start",
-            "status": data["status"]
-        }
+        # Construct the status string
+        status_string = f"{response['status'].value} {response['status'].phrase}"
 
-        # If the data contains response headers
-        if "headers" in data and data["headers"]:
+        # Response headers
+        headers = []
 
-            # Add headers to the response start
-            headers = response_start.setdefault("headers", [])
+        # Add all headers
+        if "headers" in response:
+            for name, value in response["headers"].items():
+                headers.append((name, value))
 
-            # Encode each header and add it to the response start
-            for name, value in data["headers"].items():
-                headers.append((
-                    name.encode("utf-8"),
-                    value.encode("utf-8")
-                ))
+        # Start the response
+        start_response(status_string, headers)
 
-        # Initialize the response body
-        response_body = {"type": "http.response.body"}
+        # If the response contains a body, encode and return it
+        if "body" in response:
+            return [response["body"].encode("utf-8")]
 
-        # If the data contains a body encode it and add it to the response body
-        if "body" in data and data["body"]:
-            response_body["body"] = data["body"].encode("utf-8")
-
-        # Send the response
-        await send(response_start)
-        await send(response_body)
+        # Return an empty response body
+        return []
 
     # =============================================================================================
-    # Main ASGI callable
+    # Main WSGI callable
     # =============================================================================================
-    async def __call__(self, scope: dict, receive: Coroutine, send: Coroutine):
-
-        # Raise an exception if the ASGI protocol is not HTTP
-        if scope["type"] != "http":
-            raise NotImplementedError("ASGI protocol not supported!")
+    def __call__(self, environment: dict, start_response: Callable) -> Iterable:
 
         # Handle the HTTP request
         try:
 
             # Get all methods for the request path
-            methods = self._paths.get(scope["path"])
+            methods = self._paths.get(environment.get("PATH_INFO", ""))
 
             # If no methods where found respond with 404 Not Found
             if not methods:
-                await self._send_status(send, HTTPStatus.NOT_FOUND)
-                return
+                return self._send_status(start_response, HTTPStatus.NOT_FOUND)
 
             # Get the handler function for the request method
-            handler = methods.get(scope["method"])
+            handler = methods.get(environment.get("REQUEST_METHOD", ""))
 
             # If no handler is set for the request method respond with 405 Method Not Allowed
             if not handler:
-                await self._send_status(send, HTTPStatus.METHOD_NOT_ALLOWED)
-                return
+                return self._send_status(start_response, HTTPStatus.METHOD_NOT_ALLOWED)
 
             # Get the request headers
-            headers = self._get_headers(scope["headers"])
+            headers = self._get_headers(environment)
 
             # Get the request query
-            query = self._get_query(scope["query_string"])
+            query = self._get_query(environment.get("QUERY_STRING", ""))
 
             # Get the request body
-            body = await self._get_body(receive)
+            body = self._get_body(environment["wsgi.input"])
 
             # Call the handler function
-            data = await handler({
+            response = handler({
                 "headers": headers,
                 "query": query,
                 "body": body
             })
 
-            # If no data was returned respond with 200 OK
-            if not data:
-                await self._send_status(send, HTTPStatus.OK)
-                return
+            # If no response was returned respond with a generic 200 OK
+            if not response:
+                return self._send_status(start_response, HTTPStatus.OK)
 
-            # Send a response
-            await self._send_response(send, data)
+            # Send the response
+            return self._send_response(start_response, response)
 
         # If an unhandled exception occurs
-        except:
+        except Exception:
+
+            # Print the exception
+            environment["wsgi.errors"].write(traceback.format_exc())
 
             # Respond with 500 Internal Server Error
-            await self._send_status(send, HTTPStatus.INTERNAL_SERVER_ERROR)
+            return self._send_status(start_response, HTTPStatus.INTERNAL_SERVER_ERROR)
 
-            # Re-raise the exception
-            raise
-
-# Initialize the singleton ASGI instance
-asgi = ASGI()
+# Initialize the singleton WSGI instance
+wsgi = WSGI()

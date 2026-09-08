@@ -13,12 +13,12 @@ services:
       - ./Database:/docker-entrypoint-initdb.d
     env_file: ".env"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: "30s"
-      timeout: "30s"
-      start_period: "60s"
-      start_interval: "5s"
-      retries: "3"
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 30s
+      timeout: 30s
+      start_period: 60s
+      start_interval: 5s
+      retries: 3
 
   # ===============================================================================================
   # Adminer database management
@@ -31,10 +31,10 @@ services:
       - ADMINER_DEFAULT_SERVER=postgresql
     depends_on:
       postgresql:
-        condition: "service_healthy"
+        condition: service_healthy
 
   # ===============================================================================================
-  # Parker2 job scheduler
+  # Parker² job scheduler
   # ===============================================================================================
   scheduler:
     build: .
@@ -43,4 +43,4 @@ services:
     env_file: ".env"
     depends_on:
       postgresql:
-        condition: "service_healthy"
+        condition: service_healthy
