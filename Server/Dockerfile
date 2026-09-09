@@ -1,9 +1,15 @@
 # Base image
-FROM debian:stable-slim
+# Switch to debian:stable-slim once Debian 14 Forky including Python 3.14+ has been released
+FROM debian:testing-slim
 
 # Setup environment variables
 ENV PATH="/Scheduler/.venv/bin:$PATH"
-ENV SCHEDULER_HOST="0.0.0.0"
+ENV POSTGRES_HOST=0.0.0.0
+ENV POSTGRES_PORT=5432
+ENV POSTGRES_USER=user
+ENV POSTGRES_PASSWORD=password
+ENV POSTGRES_DB=database
+ENV SCHEDULER_HOST=0.0.0.0
 ENV SCHEDULER_PORT=8000
 ENV SCHEDULER_WORKERS=1
 
