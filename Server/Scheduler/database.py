@@ -36,7 +36,7 @@ pool = ConnectionPool(
     open=True,
 
     # Check if the connection is working before yielding it, otherwise create a new connection
-    check=ConnectionPool.check
+    check=ConnectionPool.check_connection
 
 )
 

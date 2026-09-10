@@ -47,33 +47,42 @@ class WSGI:
         # Define a wrapper function around the handler
         def wrapper(request: dict) -> dict | None:
 
-            # Bad request response data
-            status = HTTPStatus.BAD_REQUEST
-            bad_request = {
-                "status": status,
-                "body": f"{status.value} {status.phrase}"
-            }
-
             # Get the request headers
             headers = request.get("headers")
 
             # If there are no request headers respond with 400 Bad Request
             if not headers:
-                return bad_request
+                return {
+                    "status": HTTPStatus.BAD_REQUEST,
+                    "body": "Missing headers!"
+                }
 
             # Get the content type
             content_type = headers.get("content_type")
 
-            # If there is no content type or the content type is not JSON respond with 400 Bad Request
-            if not content_type or content_type != "application/json":
-                return bad_request
+            # If there is no content type respond with 400 Bad Request
+            if not content_type:
+                return {
+                    "status": HTTPStatus.BAD_REQUEST,
+                    "body": "Missing content type!"
+                }
+
+            # If the content type is not "application/json" respond with 400 Bad Request
+            if content_type != "application/json":
+                return {
+                    "status": HTTPStatus.BAD_REQUEST,
+                    "body": "Incorrect content type!"
+                }
 
             # Get the request body
             body = request.get("body")
 
             # If the request contains no body respond with 400 Bad Request
             if not body:
-                return bad_request
+                return {
+                    "status": HTTPStatus.BAD_REQUEST,
+                    "body": "Missing body!"
+                }
 
             # Try to parse the request body as JSON
             try:
@@ -81,7 +90,10 @@ class WSGI:
 
             # If the body can not be parsed as JSON respond with 400 Bad Request
             except json.JSONDecodeError:
-                return bad_request
+                return {
+                    "status": HTTPStatus.BAD_REQUEST,
+                    "body": "Body not parsable!"
+                }
 
             # Call the handler function with the parsed body
             return handler(request)
@@ -90,18 +102,39 @@ class WSGI:
         return wrapper
 
     # =============================================================================================
-    # Send a basic HTTP status response
+    # Send a response
     # =============================================================================================
-    def _send_status(self, start_response: Callable, status: HTTPStatus) -> Iterable:
+    def _send_response(self, start_response: Callable, response: dict) -> Iterable:
 
         # Construct the status string
-        status_string = f"{status.value} {status.phrase}"
+        status_string = f"{response['status'].value} {response['status'].phrase}"
+
+        # Response headers
+        headers = []
+
+        # Add all headers
+        if "headers" in response:
+            for name, value in response["headers"].items():
+                headers.append((name, value))
 
         # Start the response
-        start_response(status_string, [])
+        start_response(status_string, headers)
 
-        # Return the encoded status body
-        return [status_string.encode("utf-8")]
+        # If the response contains a body, encode and return it
+        if "body" in response:
+            return [response["body"].encode("utf-8")]
+
+        # Return an empty response body
+        return []
+
+    # =============================================================================================
+    # Construct a basic response from an HTTP status
+    # =============================================================================================
+    def _status_response(self, status: HTTPStatus) -> dict:
+        return {
+            "status": status,
+            "body": status.phrase
+        }
 
     # =============================================================================================
     # Get the request headers
@@ -162,32 +195,6 @@ class WSGI:
         return body
 
     # =============================================================================================
-    # Send a response
-    # =============================================================================================
-    def _send_response(self, start_response: Callable, response: dict) -> Iterable:
-
-        # Construct the status string
-        status_string = f"{response['status'].value} {response['status'].phrase}"
-
-        # Response headers
-        headers = []
-
-        # Add all headers
-        if "headers" in response:
-            for name, value in response["headers"].items():
-                headers.append((name, value))
-
-        # Start the response
-        start_response(status_string, headers)
-
-        # If the response contains a body, encode and return it
-        if "body" in response:
-            return [response["body"].encode("utf-8")]
-
-        # Return an empty response body
-        return []
-
-    # =============================================================================================
     # Main WSGI callable
     # =============================================================================================
     def __call__(self, environment: dict, start_response: Callable) -> Iterable:
@@ -200,14 +207,14 @@ class WSGI:
 
             # If no methods where found respond with 404 Not Found
             if not methods:
-                return self._send_status(start_response, HTTPStatus.NOT_FOUND)
+                return self._send_response(start_response, self._status_response(HTTPStatus.NOT_FOUND))
 
             # Get the handler function for the request method
             handler = methods.get(environment.get("REQUEST_METHOD", ""))
 
             # If no handler is set for the request method respond with 405 Method Not Allowed
             if not handler:
-                return self._send_status(start_response, HTTPStatus.METHOD_NOT_ALLOWED)
+                return self._send_response(start_response, self._status_response(HTTPStatus.METHOD_NOT_ALLOWED))
 
             # Get the request headers
             headers = self._get_headers(environment)
@@ -227,7 +234,7 @@ class WSGI:
 
             # If no response was returned respond with a generic 200 OK
             if not response:
-                return self._send_status(start_response, HTTPStatus.OK)
+                return self._send_response(start_response, self._status_response(HTTPStatus.OK))
 
             # Send the response
             return self._send_response(start_response, response)
@@ -239,7 +246,7 @@ class WSGI:
             environment["wsgi.errors"].write(traceback.format_exc())
 
             # Respond with 500 Internal Server Error
-            return self._send_status(start_response, HTTPStatus.INTERNAL_SERVER_ERROR)
+            return self._send_response(start_response, self._status_response(HTTPStatus.INTERNAL_SERVER_ERROR))
 
 # Initialize the singleton WSGI instance
 wsgi = WSGI()
