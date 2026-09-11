@@ -1,59 +1,140 @@
 from wsgi import wsgi
+from database import pool
+import sys
+from http import HTTPStatus
+import re
+import json
+from uuid import UUID
 
 # Set the main WSGI instance
 main = wsgi
 
 # =================================================================================================
-# Endpoint for clients to log in
+# Initialization
 # =================================================================================================
-@main.POST("/client/login")
-@main.requires_json_body
-def client_login(request: dict) -> dict | None:
-    return
+def initialize():
+
+    # Terminate all workers that have not deregistered themselves
+    with pool.connection() as connection:
+        with connection.transaction():
+            connection.execute("""
+                UPDATE workers
+                SET
+                    state = 'terminated',
+                    termination_date = now()
+                WHERE state = 'registered';
+            """)
+
+# Run the initialization function if the initialization launch argument is provided
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "initialize":
+            initialize()
 
 # =================================================================================================
-# Endpoint for clients to log out
+# Worker registration
 # =================================================================================================
-@main.POST("/client/logout")
+@main.POST("/worker/registration")
 @main.requires_json_body
-def client_logout(request: dict) -> dict | None:
-    return
+def worker_registration(request: dict) -> dict:
+
+    # Get the name of the worker
+    name = request["body"].get("name")
+
+    # If there is no name respond with 400 Bad Request
+    if not name:
+        return {
+            "status": HTTPStatus.BAD_REQUEST,
+            "body": "Missing name!"
+        }
+
+    # If the name is to short respond with 400 Bad Request
+    if len(name) < 1:
+        return {
+            "status": HTTPStatus.BAD_REQUEST,
+            "body": "Name to short"
+        }
+
+    # If the name is to long respond with 400 Bad request
+    if len(name) > 64:
+        return {
+            "status": HTTPStatus.BAD_REQUEST,
+            "body": "Name to long!"
+        }
+
+    # If the name contains any other characters than "a-z", "A-Z", "0-9" or "-" respond with 400 Bad Request
+    if not re.fullmatch("[a-zA-Z0-9-]+", name):
+        return {
+            "status": HTTPStatus.BAD_REQUEST,
+            "body": "Illegal character in name!"
+        }
+
+    # Insert the worker into the database
+    with pool.connection() as connection:
+        with connection.transaction():
+            row = connection.execute(t"""
+                INSERT INTO workers (name)
+                VALUES ({name})
+                RETURNING uuid;
+            """).fetchone()
+
+    # Return the worker UUID as JSON
+    return {
+        "status": HTTPStatus.OK,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "body": json.dumps({
+            "uuid": str(row["uuid"])
+        })
+    }
 
 # =================================================================================================
-# Endpoint for acquiring a new job
+# Worker deregistration
 # =================================================================================================
-@main.GET("/job")
-def job(request: dict) -> dict | None:
-    return
-
-# =================================================================================================
-# Endpoint for posting a job update
-# =================================================================================================
-@main.POST("/job/update")
+@main.POST("/worker/deregistration")
 @main.requires_json_body
-def job_update(request: dict) -> dict | None:
-    return
+def worker_deregistration(request: dict) -> dict | None:
 
-# =================================================================================================
-# Endpoint for posting a job completion
-# =================================================================================================
-@main.POST("/job/completion")
-@main.requires_json_body
-def job_completion(request: dict) -> dict | None:
-    return
+    # Get the worker UUID
+    uuid = request["body"].get("uuid")
 
-# =================================================================================================
-# Endpoint for canceling a job
-# =================================================================================================
-@main.POST("/job/cancellation")
-@main.requires_json_body
-def job_cancellation(request: dict) -> dict | None:
-    return
+    # If there is no UUID respond with 400 Bad Request
+    if not uuid:
+        return {
+            "status": HTTPStatus.BAD_REQUEST,
+            "body": "Missing UUID!"
+        }
 
-# =================================================================================================
-# Endpoint for posting a result
-# =================================================================================================
-@main.POST("/result")
-@main.requires_json_body
-def result(request: dict) -> dict | None:
+    # Try to parse the UUID
+    try:
+        uuid = UUID(uuid)
+
+    # If the UUID is invalid respond with 400 Bad Request
+    except ValueError:
+        return {
+            "status": HTTPStatus.BAD_REQUEST,
+            "body": "Invalid UUID!"
+        }
+
+    # Update the worker in the database
+    with pool.connection() as connection:
+        with connection.transaction():
+            cursor = connection.execute(t"""
+                UPDATE workers
+                SET
+                    state = 'deregistered',
+                    deregistration_date = now()
+                WHERE uuid = {uuid}
+                AND state = 'registered';
+            """)
+
+    # If no rows where affected, meaning no registered worker was found, respond with 400 Bad Request
+    if cursor.rowcount == 0:
+        return {
+            "status": HTTPStatus.BAD_REQUEST,
+            "body": "No registered worker with the given UUID!"
+        }
+
+    # Respond with 200 OK
     return

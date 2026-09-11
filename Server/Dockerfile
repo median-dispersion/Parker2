@@ -4,7 +4,7 @@ FROM debian:testing-slim
 
 # Setup environment variables
 ENV PATH="/Scheduler/.venv/bin:$PATH"
-ENV POSTGRES_HOST=0.0.0.0
+ENV POSTGRES_HOST=postgresql
 ENV POSTGRES_PORT=5432
 ENV POSTGRES_USER=user
 ENV POSTGRES_PASSWORD=password
