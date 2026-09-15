@@ -1,0 +1,6 @@
+# Docker services
+services:
+
+  # Manager container
+  manager:
+    build: .
