@@ -3,6 +3,9 @@ FROM debian:stable-slim
 
 # Set environment variables
 ENV PATH=$PATH:/Manager/.venv/bin
+ENV GUNICORN_HOST=0.0.0.0
+ENV GUNICORN_PORT=8000
+ENV GUNICORN_WORKERS=1
 
 # Install system dependencies
 RUN apt-get update
