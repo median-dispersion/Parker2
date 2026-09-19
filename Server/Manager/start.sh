@@ -3,5 +3,5 @@
 # Exit immediately if a command returns a non-zero status
 set -e
 
-# Run gunicorn
-gunicorn --bind $GUNICORN_HOST:$GUNICORN_PORT --workers $GUNICORN_WORKERS main:main
+# Run Gunicorn
+gunicorn --bind $MANAGER_HOST:$MANAGER_PORT --workers $MANAGER_PROCESSES main:main

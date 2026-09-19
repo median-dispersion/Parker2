@@ -1,4 +1,4 @@
-from http import HTTPStatus
+from http import HTTPStatus, HTTPMethod
 from collections.abc import Callable
 from traceback import format_exc
 
@@ -51,7 +51,7 @@ class Response:
     # =============================================================================================
     # Get the body
     # =============================================================================================
-    def get_body(self, style: type = str, encoding: str = "utf-8") -> str | bytes:
+    def get_body(self, style: type = str, encoding: str = "latin-1") -> str | bytes:
 
         # Return the body as a string
         if style == str:
@@ -70,9 +70,37 @@ class Response:
 class WSGI:
 
     # =============================================================================================
+    # Initialization
+    # =============================================================================================
+    def __init__(self):
+        self._paths = {}
+
+    # =============================================================================================
+    # Add a POST path
+    # =============================================================================================
+    def POST(self, path: str) -> Callable:
+
+        # Define a decorator function
+        def decorator(function: Callable):
+
+            # Add the path
+            methods = self._paths.setdefault(path, {})
+
+            # Raise an exception if the request method is already defined
+            if HTTPMethod.POST in methods:
+                raise ValueError("Method already defined")
+
+            # Set the request method and handler function
+            methods[HTTPMethod.POST] = function
+
+        # Return the decorator function
+        return decorator
+
+    # =============================================================================================
     # Send a response to the client
     # =============================================================================================
-    def _respond(self, start_response: Callable, response: Response) -> list:
+    @staticmethod
+    def _respond(start_response: Callable, response: Response) -> list:
 
         # Start the response
         start_response(response.get_status(str), response.get_headers(list))
@@ -88,8 +116,40 @@ class WSGI:
         # Handle HTTP requests
         try:
 
-            # Respond with a 200 OK
-            return self._respond(start_response, Response(status = HTTPStatus.OK, body = HTTPStatus.OK.phrase))
+            # Get all methods for the request path
+            methods = self._paths.get(environment.get("PATH_INFO", ""))
+
+            # If no methods where found respond with 404 Not Found
+            if not methods:
+                return WSGI._respond(
+                    start_response,
+                    Response(
+                        status = HTTPStatus.NOT_FOUND,
+                        body = HTTPStatus.NOT_FOUND.phrase
+                    )
+                )
+
+            # Get the handler function for the request method
+            function = methods.get(environment.get("REQUEST_METHOD", ""))
+
+            # If no handler function was found respond with 405 Method Not Allowed
+            if not function:
+                return WSGI._respond(
+                    start_response,
+                    Response(
+                        status = HTTPStatus.METHOD_NOT_ALLOWED,
+                        body = HTTPStatus.METHOD_NOT_ALLOWED.phrase
+                    )
+                )
+
+            # Respond with 200 OK
+            return WSGI._respond(
+                start_response,
+                Response(
+                    status = HTTPStatus.OK,
+                    body = HTTPStatus.OK.phrase
+                )
+            )
 
         # If an unhandled exception occurs
         except:
@@ -97,5 +157,11 @@ class WSGI:
             # Print the exception
             environment["wsgi.errors"].write(format_exc())
 
-            # Respond with a 500 Internal Server Error
-            return self._respond(start_response, Response(status = HTTPStatus.INTERNAL_SERVER_ERROR, body = HTTPStatus.INTERNAL_SERVER_ERROR.phrase))
+            # Respond with 500 Internal Server Error
+            return WSGI._respond(
+                start_response,
+                Response(
+                    status = HTTPStatus.INTERNAL_SERVER_ERROR,
+                    body = HTTPStatus.INTERNAL_SERVER_ERROR.phrase
+                )
+            )
