@@ -1,4 +1,3 @@
-from __future__ import annotations # Remove when upgrading to Python 3.14+
 from http import HTTPStatus, HTTPMethod
 from copy import deepcopy
 from typing import Any

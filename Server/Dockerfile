@@ -1,11 +1,15 @@
 # Base image
-FROM debian:stable-slim
+# Switch to debian:stable-slim once Debian 14 Forky including Python 3.14+ has been released
+FROM debian:testing-slim
 
 # Set environment variables
 ENV PATH=$PATH:/Manager/.venv/bin
 ENV MANAGER_HOST=0.0.0.0
 ENV MANAGER_PORT=8000
 ENV MANAGER_PROCESSES=1
+ENV POSTGRES_USER=user
+ENV POSTGRES_PASSWORD=password
+ENV POSTGRES_DB=database
 
 # Install system dependencies
 RUN apt-get update
