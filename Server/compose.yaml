@@ -6,6 +6,8 @@ services:
   # ===============================================================================================
   postgresql:
     image: postgres:latest
+    ports:
+      - "5432:5432"
     volumes:
       - ./PostgreSQL:/var/lib/postgresql
       - ./Database:/docker-entrypoint-initdb.d
