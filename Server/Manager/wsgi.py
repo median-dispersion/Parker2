@@ -144,6 +144,73 @@ class StatusResponse(TextResponse):
         super().__init__(status, headers, status.phrase, encoding)
 
 # =================================================================================================
+# JSON response class
+# =================================================================================================
+class JSONResponse(Response):
+
+    # =============================================================================================
+    # Initialization
+    # =============================================================================================
+    def __init__(
+        self,
+        status: HTTPStatus,
+        headers: dict[str, str] | None = None,
+        body: dict[str, Any] | None = None,
+        encoding: str = "utf-8"
+    ):
+
+        # Store the JSON encoding
+        self._encoding = encoding
+
+        # If no headers dictionary was provided create it
+        if headers == None:
+            headers = {}
+
+        # If a headers dictionary was provided copy it
+        else:
+            headers = headers.copy()
+
+        # Define the content type header
+        content_type_name = "Content-Type"
+        content_type_value = f"application/json; charset={self._encoding}"
+
+        # If the content type header is set, check if its value is correct, else raise an exception
+        if content_type_name in headers:
+            if content_type_value != headers[content_type_name]:
+                raise ValueError("Incorrect content type")
+
+        # If the content type header is not set, set it
+        else:
+            headers[content_type_name] = content_type_value
+
+        # If the body is None create a empty JSON dict
+        if body == None:
+            body = {}
+
+        # Encode the body as JSON
+        body = json.dumps(
+            obj = body,
+            default = lambda object: str(object)
+        ).encode(self._encoding)
+
+        # Call the parent constructor
+        super().__init__(status, headers, body)
+
+    # =============================================================================================
+    # Get the body as a dict
+    # =============================================================================================
+    @property
+    def body_dict(self) -> dict[str, Any]:
+        return json.loads(self._body.decode(self._encoding))
+
+    # =============================================================================================
+    # Get the JSON encoding
+    # =============================================================================================
+    @property
+    def encoding(self) -> str:
+        return self._encoding
+
+# =================================================================================================
 # Base request class
 # =================================================================================================
 class Request:
@@ -461,7 +528,7 @@ class WSGI:
             headers["Content-Type"] = f"application/json; charset={encoding}"
 
             # Call the handler function
-            handler(JSONRequest(
+            return handler(JSONRequest(
                 method = request.method,
                 path = request.path,
                 query = request.query,

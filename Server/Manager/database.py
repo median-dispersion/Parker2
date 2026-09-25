@@ -2,6 +2,7 @@ from psycopg_pool import ConnectionPool
 import os
 from psycopg.rows import dict_row
 import atexit
+import sys
 
 # Create a new database connection pool
 pool = ConnectionPool(
@@ -45,3 +46,25 @@ pool.wait()
 
 # Close the pool on exit
 atexit.register(pool.close)
+
+# =================================================================================================
+# Initialize the database
+# =================================================================================================
+def initialize():
+
+    # Terminate all worker that are still marked as connected
+    with pool.connection() as connection:
+        with connection.transaction():
+            connection.execute(t"""
+                UPDATE workers
+                SET
+                    status = 'terminated',
+                    terminated_at = CURRENT_TIMESTAMP(6)
+                WHERE status = 'connected';
+            """)
+
+# If the module is called as a script and the "initialize" argument is provided initialize the database
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "initialize":
+            initialize()
