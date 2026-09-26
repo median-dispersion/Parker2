@@ -4,6 +4,7 @@ from typing import Any
 import json
 from collections.abc import Callable
 from codecs import lookup as codecs_lookup
+from validation import ValidationError
 from urllib.parse import parse_qs
 from traceback import format_exc
 from sys import exc_info
@@ -86,16 +87,12 @@ class TextResponse(Response):
         encoding: str = "iso_8859_1"
     ):
 
-        # Store the string encoding
+        # Initialize member variables
+        self._body_string = body
         self._encoding = encoding
 
-        # If no headers dictionary was provided create it
-        if headers == None:
-            headers = {}
-
-        # If a headers dictionary was provided copy it
-        else:
-            headers = headers.copy()
+        # Copy or initialize the headers
+        headers = headers.copy() if headers != None else {}
 
         # Define the content type header
         content_type_name = "Content-Type"
@@ -111,14 +108,18 @@ class TextResponse(Response):
             headers[content_type_name] = content_type_value
 
         # Call the parent constructor
-        super().__init__(status, headers, body.encode(self._encoding))
+        super().__init__(
+            status = status,
+            headers = headers,
+            body = self._body_string.encode(self._encoding)
+        )
 
     # =============================================================================================
     # Get the body as a string
     # =============================================================================================
     @property
     def body_string(self) -> str:
-        return self.body.decode(self._encoding)
+        return self._body_string
 
     # =============================================================================================
     # Get the body encoding
@@ -141,7 +142,12 @@ class StatusResponse(TextResponse):
         headers: dict[str, str] | None = None,
         encoding: str = "iso_8859_1"
     ):
-        super().__init__(status, headers, status.phrase, encoding)
+        super().__init__(
+            status = status,
+            headers = headers,
+            body = status.phrase,
+            encoding = encoding
+        )
 
 # =================================================================================================
 # JSON response class
@@ -159,16 +165,12 @@ class JSONResponse(Response):
         encoding: str = "utf-8"
     ):
 
-        # Store the JSON encoding
+        # Initialize member variables
+        self._body_dict = deepcopy(body) if body != None else {}
         self._encoding = encoding
 
-        # If no headers dictionary was provided create it
-        if headers == None:
-            headers = {}
-
-        # If a headers dictionary was provided copy it
-        else:
-            headers = headers.copy()
+        # Copy or initialize the headers
+        headers = headers.copy() if headers != None else {}
 
         # Define the content type header
         content_type_name = "Content-Type"
@@ -183,25 +185,22 @@ class JSONResponse(Response):
         else:
             headers[content_type_name] = content_type_value
 
-        # If the body is None create a empty JSON dict
-        if body == None:
-            body = {}
-
-        # Encode the body as JSON
-        body = json.dumps(
-            obj = body,
-            default = lambda object: str(object)
-        ).encode(self._encoding)
-
         # Call the parent constructor
-        super().__init__(status, headers, body)
+        super().__init__(
+            status = status,
+            headers = headers,
+            body = json.dumps(
+                obj = self._body_dict,
+                default = lambda object: str(object)
+            ).encode(self._encoding)
+        )
 
     # =============================================================================================
     # Get the body as a dict
     # =============================================================================================
     @property
     def body_dict(self) -> dict[str, Any]:
-        return json.loads(self._body.decode(self._encoding))
+        return deepcopy(self._body_dict)
 
     # =============================================================================================
     # Get the JSON encoding
@@ -287,7 +286,8 @@ class JSONRequest(Request):
         encoding: str = "utf-8"
     ):
 
-        # Store the JSON encoding
+        # Initialize member variables
+        self._body_dict = deepcopy(body)
         self._encoding = encoding
 
         # Raise an exception if the content type is not correct
@@ -296,11 +296,14 @@ class JSONRequest(Request):
 
         # Call the parent constructor
         super().__init__(
-            method,
-            path,
-            query,
-            headers,
-            json.dumps(body).encode(self._encoding)
+            method = method,
+            path = path,
+            query = query,
+            headers = headers,
+            body = json.dumps(
+                obj = self._body_dict,
+                default = lambda object: str(object)
+            ).encode(self._encoding)
         )
 
     # =============================================================================================
@@ -308,7 +311,7 @@ class JSONRequest(Request):
     # =============================================================================================
     @property
     def body_dict(self) -> dict[str, Any]:
-        return json.loads(self._body.decode(self._encoding))
+        return deepcopy(self._body_dict)
 
     # =============================================================================================
     # Get the JSON encoding
@@ -461,84 +464,110 @@ class WSGI:
     # Only allow requests that contain JSON content
     # =============================================================================================
     @staticmethod
-    def requires_json(handler: WSGI._RequestHandler) -> WSGI._RequestHandler:
+    def requires_json(arguments: dict[str, Callable[[Any], Any]] | None = None) -> WSGI._RequestHandlerDecorator:
 
-        # Define a wrapper function around the handler function
-        def wrapper(request: Request) -> Response | None:
+        # Define a decorator that returns a wrapper around the request handler
+        def decorator(handler: WSGI._RequestHandler) -> WSGI._RequestHandler:
 
-            # Get the request header
-            headers = request.headers
+            # Define a wrapper function around the handler function
+            def wrapper(request: Request) -> TextResponse | Response | None:
 
-            # Get the content type
-            content_type = headers.get("Content-Type")
+                # Get the request header
+                headers = request.headers
 
-            # If no content type header was found respond with 400 Bad Request
-            if not content_type:
-                return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Missing content type")
+                # Get the content type
+                content_type = headers.get("Content-Type")
 
-            # Split the content type header into its values
-            content_type_values = content_type.split(";", maxsplit = 1)
+                # If no content type header was found respond with 400 Bad Request
+                if not content_type:
+                    return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Missing content type")
 
-            # Get the actual content type
-            content_type = content_type_values[0].strip()
+                # Split the content type header into its values
+                content_type_values = content_type.split(";", maxsplit = 1)
 
-            # If the content type is not "application/json" respond with 400 Bad Request
-            if content_type != "application/json":
-                return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Incorrect content type")
+                # Get the actual content type
+                content_type = content_type_values[0].strip()
 
-            # Set the character encoding to a default value of "utf-8"
-            encoding = "utf-8"
+                # If the content type is not "application/json" respond with 400 Bad Request
+                if content_type != "application/json":
+                    return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Incorrect content type")
 
-            # If the content type header included a second value extract the character encoding
-            if len(content_type_values) == 2:
-                encoding = content_type_values[1].strip().removeprefix("charset=")
+                # Set the character encoding to a default value of "utf-8"
+                encoding = "utf-8"
 
-            # Try to lookup the character encoding
-            try:
-                codecs_lookup(encoding)
+                # If the content type header included a second value extract the character encoding
+                if len(content_type_values) == 2:
+                    encoding = content_type_values[1].strip().removeprefix("charset=")
 
-            # If the character encoding was not found respond with 400 Bad Request
-            except LookupError:
-                return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Unknown character encoding")
+                # Try to lookup the character encoding
+                try:
+                    codecs_lookup(encoding)
 
-            # Get the request body
-            body = request.body
+                # If the character encoding was not found respond with 400 Bad Request
+                except LookupError:
+                    return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Unknown character encoding")
 
-            # If the body is missing respond with 400 Bad Request
-            if not body:
-                return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Missing body")
+                # Update the headers to match this exact content type value
+                headers["Content-Type"] = f"application/json; charset={encoding}"
 
-            # Try to decode the body
-            try:
-                body = request.body.decode(encoding)
+                # Get the request body
+                body = request.body
 
-            # If the body can't be decoded
-            except UnicodeDecodeError:
-                return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Body not decodable")
+                # If the body is missing respond with 400 Bad Request
+                if not body:
+                    return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Missing body")
 
-            # Try to parse the body as JSON
-            try:
-                body = json.loads(body)
+                # Try to decode the body
+                try:
+                    body = request.body.decode(encoding)
 
-            # If the body can't be parsed as JSON
-            except json.JSONDecodeError:
-                return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Invalid JSON body")
+                # If the body can't be decoded
+                except UnicodeDecodeError:
+                    return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Body not decodable")
 
-            # Update the headers to match this exact content type value
-            headers["Content-Type"] = f"application/json; charset={encoding}"
+                # Try to parse the body as JSON
+                try:
+                    body = json.loads(body)
 
-            # Call the handler function
-            return handler(JSONRequest(
-                method = request.method,
-                path = request.path,
-                query = request.query,
-                headers = headers,
-                body = body,
-                encoding = encoding
-            ))
+                # If the body can't be parsed as JSON
+                except json.JSONDecodeError:
+                    return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Invalid JSON body")
 
-        # Return the wrapper function
-        return wrapper
+                # Loop through all required JSON arguments
+                if arguments:
+                    for argument, validate in arguments.items():
+
+                        # If the argument is missing respond with 400 Bad Request
+                        if argument not in body:
+                            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Missing argument")
+
+                        # Try to validate the argument
+                        try:
+                            value = validate(body[argument])
+
+                            # Update the body if an updated value was returned by the validation
+                            if value:
+                                body[argument] = value
+
+                        # If the argument validation failed respond with 400 Bad Request
+                        except ValidationError as reason:
+                            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = str(reason))
+
+                # Call the handler function
+                return handler(JSONRequest(
+                    method = request.method,
+                    path = request.path,
+                    query = request.query,
+                    headers = headers,
+                    body = body,
+                    encoding = encoding
+                ))
+
+            # Return the wrapper function
+            return wrapper
+
+        # Return the decorator
+        return decorator
 
     # =============================================================================================
     # Send a response

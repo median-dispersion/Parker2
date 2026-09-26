@@ -1,8 +1,7 @@
 from wsgi import WSGI, JSONRequest, TextResponse, JSONResponse
 from http import HTTPStatus
-import re
+import validation
 from database import pool
-from uuid import UUID
 
 # Initialize the main WSGI instance
 main = WSGI()
@@ -11,30 +10,11 @@ main = WSGI()
 # An endpoint for workers to connect to the server
 # =================================================================================================
 @main.POST("/worker/connect")
-@main.requires_json
+@main.requires_json({"name": validation.worker_name})
 def connect_worker(request: JSONRequest) -> TextResponse | JSONResponse:
 
-    # Get the JSON body
-    body = request.body_dict
-
     # Get the worker name
-    name = body.get("name")
-
-    # If no name was provided respond with 400 Bad Request
-    if not name:
-        return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Missing name")
-
-    # If the name is to short respond with 400 Bad Request
-    if len(name) < 1:
-        return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Name to short")
-
-    # If the name is to long respond with 400 Bad Request
-    if len(name) > 64:
-        return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Name to long")
-
-    # If the name contains illegal character respond with 400 Bad Request
-    if not re.fullmatch("[a-zA-Z0-9-]+", name):
-        return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Invalid name")
+    name = request.body_dict["name"]
 
     # Insert the worker into the database
     with pool.connection() as connection:
@@ -52,26 +32,11 @@ def connect_worker(request: JSONRequest) -> TextResponse | JSONResponse:
 # An endpoint for workers to disconnect from the server
 # =================================================================================================
 @main.POST("/worker/disconnect")
-@main.requires_json
+@main.requires_json({"uuid": validation.uuid})
 def disconnect_worker(request: JSONRequest) -> TextResponse:
 
-    # Get the JSON body
-    body = request.body_dict
-
     # Get the worker UUID
-    uuid = body.get("uuid")
-
-    # If the worker uuid is missing respond with 400 Bad Request
-    if not uuid:
-        return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Missing UUID")
-
-    # Try to parse the UUID
-    try:
-        uuid = UUID(uuid)
-
-    # If the UUID is invalid respond with 400 Bad Request
-    except ValueError:
-        return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Invalid UUID")
+    uuid = request.body_dict["uuid"]
 
     # Set the worker status to disconnected
     with pool.connection() as connection:
