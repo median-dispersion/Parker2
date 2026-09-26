@@ -1,7 +1,8 @@
-from wsgi import WSGI, JSONRequest, TextResponse, JSONResponse
+from wsgi import WSGI, JSONRequest, TextResponse, JSONResponse, Request
 from http import HTTPStatus
 import validation
 from database import pool
+import settings
 
 # Initialize the main WSGI instance
 main = WSGI()
@@ -56,3 +57,19 @@ def disconnect_worker(request: JSONRequest) -> TextResponse:
         return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker not connected")
 
     # Implicitly respond with 200 OK
+
+# =================================================================================================
+# An endpoint for getting the job rules
+# =================================================================================================
+@main.GET("/job/rules")
+def job_rules(request: Request) -> JSONResponse:
+
+    # Respond with the job rules as JSON
+    return JSONResponse(
+        status = HTTPStatus.OK,
+        body = {
+            "minimum_size": settings.job_minimum_size,
+            "maximum_size": settings.job_maximum_size,
+            "update_interval_seconds": settings.job_update_interval_seconds
+        }
+    )

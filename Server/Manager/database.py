@@ -1,5 +1,5 @@
 from psycopg_pool import ConnectionPool
-import os
+import settings
 from psycopg.rows import dict_row
 import atexit
 import sys
@@ -11,11 +11,11 @@ pool = ConnectionPool(
     kwargs={
 
         # PostgreSQL settings
-        "host": os.getenv("POSTGRES_HOST", "0.0.0.0"),
-        "port": os.getenv("POSTGRES_PORT", "5432"),
-        "user": os.getenv("POSTGRES_USER", "user"),
-        "password": os.getenv("POSTGRES_PASSWORD", "password"),
-        "dbname": os.getenv("POSTGRES_DB", "database"),
+        "host": settings.postgresql_host,
+        "port": settings.postgresql_port,
+        "user": settings.postgresql_user,
+        "password": settings.postgresql_password,
+        "dbname": settings.postgresql_database,
 
         # Make all queries persisted immediately, unless explicitly using a transaction block
         "autocommit": True,

@@ -1,5 +1,6 @@
 import re
 from uuid import UUID
+import settings
 
 # Custom validation error exception
 class ValidationError(ValueError): pass
@@ -39,3 +40,23 @@ def uuid(uuid: str) -> UUID:
 
     # Return the parsed UUID
     return uuid
+
+# =================================================================================================
+# Validate a job size
+# =================================================================================================
+def job_size(size: int) -> int:
+
+    # Raise an exception if the size is not an integer
+    if not isinstance(size, int):
+        raise ValidationError("Invalid size")
+
+    # Raise an exception if the size is to small
+    if size < settings.job_minimum_size:
+        raise ValidationError("Size to small")
+
+    # Raise an exception if the size is to large
+    if size > settings.job_maximum_size:
+        raise ValidationError("Size to large")
+
+    # Return the job size
+    return size
