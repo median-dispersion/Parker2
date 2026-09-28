@@ -46,6 +46,7 @@ def disconnect_worker(request: JSONRequest) -> TextResponse:
                 UPDATE workers
                 SET
                     status = 'disconnected',
+                    active_at = CURRENT_TIMESTAMP(6),
                     disconnected_at = CURRENT_TIMESTAMP(6)
                 WHERE uuid = {uuid}
                 AND status = 'connected';
