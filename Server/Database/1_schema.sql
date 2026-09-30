@@ -1,4 +1,35 @@
 -- ================================================================================================
+-- Custom unsigned 64-Bit integer type
+-- ================================================================================================
+CREATE DOMAIN ui64 AS numeric(20, 0) CHECK (
+    VALUE >= 0 AND
+    VALUE <= 18446744073709551615
+);
+
+-- Alternative unsigned 64-Bit integer type using bigint
+-- Can be used as a drop in replacement for the numeric ui64 type
+-- Is significantly faster than using numeric but only allows values up to 2⁶⁴/2-1
+-- CREATE DOMAIN ui64_2 AS bigint CHECK (VALUE >= 0);
+
+-- ================================================================================================
+-- Search table
+-- ================================================================================================
+CREATE TABLE search (
+
+    -- Search ID
+    -- Singleton enforcement by only allowing id = 1
+    id bigint PRIMARY KEY CHECK (id = 1),
+
+    -- Search index values
+    next_index ui64 NOT NULL,
+    completed_index ui64 NOT NULL CHECK (completed_index <= next_index)
+
+);
+
+-- Create the singleton search row
+INSERT INTO search (id, next_index, completed_index) VALUES (1, 0, 0);
+
+-- ================================================================================================
 -- Worker status type
 -- ================================================================================================
 CREATE TYPE worker_status AS ENUM (
@@ -82,19 +113,6 @@ CREATE TYPE job_status AS ENUM (
 );
 
 -- ================================================================================================
--- Custom unsigned 64-Bit integer type
--- ================================================================================================
-CREATE DOMAIN ui64 AS numeric(20, 0) CHECK (
-    VALUE >= 0 AND
-    VALUE <= 18446744073709551615
-);
-
--- Alternative unsigned 64-Bit integer type using bigint
--- Can be used as a drop in replacement for the numeric ui64 type
--- Is significantly faster than using numeric but only allows values up to 2⁶⁴/2-1
-CREATE DOMAIN ui64_2 AS bigint CHECK (VALUE >= 0);
-
--- ================================================================================================
 -- Jobs table
 -- ================================================================================================
 CREATE TABLE jobs (
@@ -122,13 +140,13 @@ CREATE TABLE jobs (
     worker_id bigint NOT NULL REFERENCES workers(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
 
     -- Job search bounds
-    start_index ui64 NOT NULL,
-    end_index ui64 NOT NULL CHECK (end_index > start_index),
+    start_index ui64 NOT NULL UNIQUE,
+    end_index ui64 NOT NULL UNIQUE CHECK (end_index > start_index),
 
     -- The search index the worker has reached
     index ui64 NOT NULL CHECK (
         index >= start_index
-        OR
+        AND
         index <= end_index
     ),
 
@@ -153,6 +171,14 @@ CREATE TABLE jobs (
         (status = 'expired' AND expired_at IS NOT NULL)
         OR
         (status != 'expired' AND expired_at IS NULL)
+    ),
+
+    -- Timestamp of when the job was canceled by the worker
+    -- Must be set if the status is "canceled" else must be "NULL"
+    canceled_at timestamp(6) with time zone CHECK (
+        (status = 'canceled' AND canceled_at IS NOT NULL)
+        OR
+        (status != 'canceled' AND canceled_at IS NULL)
     ),
 
     -- Timestamp of when the job was finished by the worker
@@ -182,28 +208,9 @@ CREATE TABLE jobs (
 );
 
 -- Create indices for the jobs table
-CREATE INDEX ON jobs(worker_id);
-
--- ================================================================================================
--- Trigger function for automatically setting the updated_at field
--- ================================================================================================
-CREATE FUNCTION set_updated_at() RETURNS trigger AS $$
-BEGIN
-
-    -- Set the update_at timestamp to the current date and time
-    NEW.updated_at = CURRENT_TIMESTAMP(6);
-
-    -- Return the updated row
-    RETURN NEW;
-
-END;
-$$ LANGUAGE plpgsql;
-
--- Create a trigger on the jobs table calling the function
-CREATE TRIGGER set_updated_at
-BEFORE UPDATE ON jobs
-FOR EACH ROW
-EXECUTE FUNCTION set_updated_at();
+CREATE INDEX ON jobs (worker_id);
+CREATE INDEX ON jobs (id) WHERE status IN ('expired', 'canceled', 'terminated');
+CREATE INDEX ON jobs (id) WHERE status = 'claimed';
 
 -- ================================================================================================
 -- Job history table
@@ -244,50 +251,5 @@ CREATE TABLE job_history (
 );
 
 -- Create indices for the job_history table
-CREATE INDEX ON job_history(job_id);
-CREATE INDEX ON job_history(worker_id);
-
--- ================================================================================================
--- Trigger function that automatically captures the job history
--- ================================================================================================
-CREATE FUNCTION capture_job_history() RETURNS trigger AS $$
-BEGIN
-
-    -- Insert a snapshot of the job into the job history
-    INSERT INTO job_history (
-        job_id,
-        status,
-        attempt,
-        cancellation_reason,
-        worker_id,
-        index,
-        solutions
-    )
-    VALUES (
-        NEW.id,
-        NEW.status,
-        NEW.attempt,
-        NEW.cancellation_reason,
-        NEW.worker_id,
-        NEW.index,
-        NEW.solutions
-    );
-
-    -- Return (required by PL/pgSQL)
-    RETURN NEW;
-
-END;
-$$ LANGUAGE plpgsql;
-
--- Create a trigger that captures the initial state of a newly created job
-CREATE TRIGGER capture_job_insert
-AFTER INSERT ON jobs
-FOR EACH ROW
-EXECUTE FUNCTION capture_job_history();
-
--- Create a trigger that captures any updates on the job state
-CREATE TRIGGER capture_job_update
-AFTER UPDATE OF status ON jobs
-FOR EACH ROW
-WHEN (NEW.status IS DISTINCT FROM OLD.status)
-EXECUTE FUNCTION capture_job_history();
+CREATE INDEX ON job_history (job_id);
+CREATE INDEX ON job_history (worker_id);

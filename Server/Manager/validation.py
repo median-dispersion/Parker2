@@ -10,13 +10,13 @@ class ValidationError(ValueError): pass
 # =================================================================================================
 def worker_name(name: str) -> str:
 
-    # Raise an exception if the name is to short
+    # Raise an exception if the name is too short
     if len(name) < 1:
-        raise ValidationError("Name to short")
+        raise ValidationError("Name too short")
 
-    # Raise an exception if the name is to long
+    # Raise an exception if the name is too long
     if len(name) > 64:
-        raise ValidationError("Name to long")
+        raise ValidationError("Name too long")
 
     # Raise an exception if the name contains illegal characters
     if not re.fullmatch("[a-zA-Z0-9-]+", name):
@@ -50,13 +50,13 @@ def job_size(size: int) -> int:
     if not isinstance(size, int):
         raise ValidationError("Invalid size")
 
-    # Raise an exception if the size is to small
+    # Raise an exception if the size is too small
     if size < settings.job_minimum_size:
-        raise ValidationError("Size to small")
+        raise ValidationError("Size too small")
 
-    # Raise an exception if the size is to large
+    # Raise an exception if the size is too large
     if size > settings.job_maximum_size:
-        raise ValidationError("Size to large")
+        raise ValidationError("Size too large")
 
     # Return the job size
     return size

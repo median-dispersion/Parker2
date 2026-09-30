@@ -3,6 +3,7 @@ from http import HTTPStatus
 import validation
 from database import pool
 import settings
+import psycopg.errors
 
 # Initialize the main WSGI instance
 main = WSGI()
@@ -72,5 +73,62 @@ def job_rules(request: Request) -> JSONResponse:
             "minimum_size": settings.job_minimum_size,
             "maximum_size": settings.job_maximum_size,
             "update_interval_seconds": settings.job_update_interval_seconds
+        }
+    )
+
+# =================================================================================================
+# An endpoint for claiming a job
+# =================================================================================================
+@main.POST("/job/claim")
+@main.requires_json({
+    "worker_uuid": validation.uuid,
+    "size": validation.job_size
+})
+def claim_job(request: JSONRequest) -> TextResponse | JSONResponse:
+
+    # Get the request body
+    body = request.body_dict
+
+    # Get the worker UUID
+    worker_uuid = body["worker_uuid"]
+
+    # Get the job size
+    size = body["size"]
+
+    # Get a database connection and transaction
+    with pool.connection() as connection:
+        with connection.transaction():
+
+            # Try to claim a job
+            try:
+                job = connection.execute(t"""
+                    SELECT
+                        uuid,
+                        start_index,
+                        end_index
+                    FROM claim_job(
+                        {worker_uuid},
+                        {size},
+                        {settings.job_timeout_seconds}
+                    );
+                """).fetchone()
+
+            # If a database exception occurs
+            except psycopg.errors.RaiseException as exception:
+
+                # If the exception is about the worker not being connected return 400 Bad Request
+                if "Worker not connected" in str(exception):
+                    return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker not connected")
+
+                # If the exception is about something else re-raise it
+                raise
+
+    # Return the claimed job and respond with 200 OK
+    return JSONResponse(
+        status = HTTPStatus.OK,
+        body = {
+            "uuid": str(job["uuid"]),
+            "start_index": int(job["start_index"]),
+            "end_index": int(job["end_index"])
         }
     )

@@ -11,4 +11,29 @@ postgresql_database = os.getenv("POSTGRES_DB", "database")
 job_minimum_size = int(os.getenv("JOB_MINIMUM_SIZE", "100000"))
 job_maximum_size = int(os.getenv("JOB_MAXIMUM_SIZE", "100000000"))
 job_update_interval_seconds = int(os.getenv("JOB_UPDATE_INTERVAL_SECONDS", "300"))
-job_expiration_time_seconds = int(os.getenv("JOB_EXPIRATION_TIME_SECONDS", "600"))
+job_timeout_seconds = int(os.getenv("JOB_TIMEOUT_SECONDS", "600"))
+
+# Job settings validation
+# The minimum job size is 1
+if job_minimum_size < 1:
+    raise ValueError("Minimum job size too small")
+
+# The minimum job size must smaller than the maximum job size
+if job_minimum_size > job_maximum_size:
+    raise ValueError("Minimum job size larger than maximum job size")
+
+# The maximum job size can not be larger than an unsigned 64-Bit integer (2⁶⁴)
+if job_maximum_size > 18446744073709551615:
+    raise ValueError("Maximum job size too large")
+
+# The job update interval must be at least 1 second long
+if job_update_interval_seconds < 1:
+    raise ValueError("Job update interval too short")
+
+# The job update interval must be shorter than the job timeout
+if job_update_interval_seconds > job_timeout_seconds:
+    raise ValueError("Job update interval longer than job timeout")
+
+# The maximum job timeout can't be longer than a PostgreSQL bigint (2⁶⁴/2)
+if job_timeout_seconds > 9223372036854775807:
+    raise ValueError("Job timeout too long")
