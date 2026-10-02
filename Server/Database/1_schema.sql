@@ -156,14 +156,14 @@ CREATE TABLE jobs (
     -- Timestamp of when the job was created
     created_at timestamp(6) with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
 
+    -- Timestamp of when the job was claimed by a worker
+    -- Defaults to the current date and time
+    claimed_at timestamp(6) with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+
     -- Timestamp of when the job was updated
     -- Defaults to the current date and time as the first update
     -- Is automatically updated by a trigger function
     updated_at timestamp(6) with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-
-    -- Timestamp of when the job was claimed by a worker
-    -- Defaults to the current date and time
-    claimed_at timestamp(6) with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
 
     -- Timestamp of when the job expired
     -- Must be set if the status is "expired" else must be "NULL"

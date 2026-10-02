@@ -52,15 +52,26 @@ atexit.register(pool.close)
 # =================================================================================================
 def initialize():
 
-    # Terminate all worker that are still marked as connected
+    # Get a database connection and transaction
     with pool.connection() as connection:
         with connection.transaction():
-            connection.execute(t"""
+
+            # Terminate all worker that are still marked as connected
+            connection.execute("""
                 UPDATE workers
                 SET
                     status = 'terminated',
                     terminated_at = CURRENT_TIMESTAMP(6)
                 WHERE status = 'connected';
+            """)
+
+            # Terminate all jobs that are still claimed
+            connection.execute("""
+                UPDATE jobs
+                SET
+                    status = 'terminated',
+                    terminated_at = CURRENT_TIMESTAMP(6)
+                WHERE status = 'claimed';
             """)
 
 # If the module is called as a script and the "initialize" argument is provided initialize the database

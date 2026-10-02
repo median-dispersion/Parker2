@@ -1,28 +1,4 @@
 -- ================================================================================================
--- Set the updated_at field of a row before updating the row
--- ================================================================================================
-CREATE FUNCTION set_updated_at()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
-
-    -- Set the updated_at timestamp to the current date and time
-    NEW.updated_at = clock_timestamp();
-
-    -- Return the updated row
-    RETURN NEW;
-
-END;
-$$;
-
--- Create a trigger function that sets the updated_at field when updating a row
-CREATE TRIGGER set_updated_at
-BEFORE UPDATE ON jobs
-FOR EACH ROW
-EXECUTE FUNCTION set_updated_at();
-
--- ================================================================================================
 -- Insert a row into the job history when the job status changed
 -- ================================================================================================
 CREATE FUNCTION capture_job_history()
@@ -39,7 +15,8 @@ BEGIN
         cancellation_reason,
         worker_id,
         index,
-        solutions
+        solutions,
+        captured_at
     )
     VALUES (
         NEW.id,
@@ -48,7 +25,8 @@ BEGIN
         NEW.cancellation_reason,
         NEW.worker_id,
         NEW.index,
-        NEW.solutions
+        NEW.solutions,
+        clock_timestamp()
     );
 
     -- Return (required by PL/pgSQL)
@@ -86,7 +64,6 @@ AS $$
 DECLARE
     v_worker_id bigint;
     v_job_id bigint;
-    v_timeout_at timestamp(6) with time zone;
     v_job jobs;
     v_start_index ui64;
     v_end_index ui64;
@@ -106,7 +83,7 @@ BEGIN
 
     -- Update the workers active_at value and get its ID
     UPDATE workers
-    SET active_at = clock_timestamp()
+    SET active_at = CURRENT_TIMESTAMP(6)
     WHERE uuid = p_worker_uuid
     AND status = 'connected'
     RETURNING id
@@ -129,15 +106,12 @@ BEGIN
     -- Check if no failed job was found
     IF v_job_id IS NULL THEN
 
-        -- Set the job timeout timestamp
-        v_timeout_at := clock_timestamp() - make_interval(secs => p_timeout_seconds);
-
         -- Try to find 1 stale job that is not yet marked as expired and lock it
         SELECT id
         INTO v_job_id
         FROM jobs
         WHERE status = 'claimed'
-        AND updated_at < v_timeout_at
+        AND updated_at < CURRENT_TIMESTAMP(6) - make_interval(secs => p_timeout_seconds)
         ORDER BY id
         LIMIT 1
         FOR UPDATE SKIP LOCKED;
@@ -147,7 +121,7 @@ BEGIN
             UPDATE jobs
             SET
                 status = 'expired',
-                expired_at = clock_timestamp()
+                expired_at = CURRENT_TIMESTAMP(6)
             WHERE id = v_job_id;
         END IF;
 
@@ -165,7 +139,8 @@ BEGIN
             worker_id = v_worker_id,
             index = start_index,
             solutions = 0,
-            claimed_at = clock_timestamp(),
+            claimed_at = CURRENT_TIMESTAMP(6),
+            updated_at = clock_timestamp(),
             expired_at = NULL,
             canceled_at = NULL,
             terminated_at = NULL
@@ -192,13 +167,15 @@ BEGIN
         worker_id,
         start_index,
         end_index,
-        index
+        index,
+        updated_at
     )
     VALUES (
         v_worker_id,
         v_start_index,
         v_end_index,
-        v_start_index
+        v_start_index,
+        clock_timestamp()
     )
     RETURNING *
     INTO v_job;

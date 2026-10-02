@@ -40,22 +40,35 @@ def disconnect_worker(request: JSONRequest) -> TextResponse:
     # Get the worker UUID
     uuid = request.body_dict["uuid"]
 
-    # Set the worker status to disconnected
+    # Disconnect the worker and terminate all jobs claimed by it
     with pool.connection() as connection:
         with connection.transaction():
-            cursor = connection.execute(t"""
-                UPDATE workers
-                SET
-                    status = 'disconnected',
-                    active_at = CURRENT_TIMESTAMP(6),
-                    disconnected_at = CURRENT_TIMESTAMP(6)
-                WHERE uuid = {uuid}
-                AND status = 'connected';
-            """)
+            worker = connection.execute(t"""
+                WITH worker AS (
+                    UPDATE workers
+                    SET
+                        status = 'disconnected',
+                        active_at = CURRENT_TIMESTAMP(6),
+                        disconnected_at = CURRENT_TIMESTAMP(6)
+                    WHERE uuid = {uuid}
+                    AND status = 'connected'
+                    RETURNING id
+                ),
+                terminated_jobs AS (
+                    UPDATE jobs
+                    SET
+                        status = 'terminated',
+                        terminated_at = CURRENT_TIMESTAMP(6)
+                    FROM worker
+                    WHERE jobs.worker_id = worker.id
+                    AND jobs.status = 'claimed'
+                )
+                SELECT id FROM worker;
+            """).fetchone()
 
-    # If no rows where affected, i.e. the UUID did not correspond to a connected worker
+    # If no worker is returned, i.e. no worker with the given UUID was connected
     # Respond with 400 Bad Request
-    if cursor.rowcount == 0:
+    if not worker:
         return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker not connected")
 
     # Implicitly respond with 200 OK
@@ -72,6 +85,7 @@ def job_rules(request: Request) -> JSONResponse:
         body = {
             "minimum_size": settings.job_minimum_size,
             "maximum_size": settings.job_maximum_size,
+            "target_duration_seconds": settings.job_target_duration_seconds,
             "update_interval_seconds": settings.job_update_interval_seconds
         }
     )
@@ -109,7 +123,7 @@ def claim_job(request: JSONRequest) -> TextResponse | JSONResponse:
                     FROM claim_job(
                         {worker_uuid},
                         {size},
-                        {settings.job_timeout_seconds}
+                        {settings.job_update_timeout_seconds}
                     );
                 """).fetchone()
 
