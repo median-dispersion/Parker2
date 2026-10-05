@@ -42,21 +42,27 @@ def uuid(uuid: str) -> UUID:
     return uuid
 
 # =================================================================================================
-# Validate a job size
+# Validate an integer
 # =================================================================================================
-def job_size(size: int) -> int:
+def integer(
+    integer: int,
+    minimum: int | None = None,
+    maximum: int | None = None
+) -> int:
 
-    # Raise an exception if the size is not an integer
-    if not isinstance(size, int):
-        raise ValidationError("Invalid size")
+    # Raise an exception if type is incorrect
+    if not isinstance(integer, int):
+        raise ValidationError("Invalid integer")
 
-    # Raise an exception if the size is too small
-    if size < settings.job_minimum_size:
-        raise ValidationError("Size too small")
+    # Raise an exception if the integer is too small
+    if minimum:
+        if integer < minimum:
+            raise ValidationError("Integer too small")
 
-    # Raise an exception if the size is too large
-    if size > settings.job_maximum_size:
-        raise ValidationError("Size too large")
+    # Raise an exception if the integer is too large
+    if maximum:
+        if integer > maximum:
+            raise ValidationError("Integer too large")
 
-    # Return the job size
-    return size
+    # Return the validated integer
+    return integer

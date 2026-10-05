@@ -464,7 +464,7 @@ class WSGI:
     # Only allow requests that contain JSON content
     # =============================================================================================
     @staticmethod
-    def requires_json(arguments: dict[str, Callable[[Any], Any]] | None = None) -> WSGI._RequestHandlerDecorator:
+    def requires_json(arguments: dict[str, Any] | None = None) -> WSGI._RequestHandlerDecorator:
 
         # Define a decorator that returns a wrapper around the request handler
         def decorator(handler: WSGI._RequestHandler) -> WSGI._RequestHandler:
@@ -535,23 +535,34 @@ class WSGI:
 
                 # Loop through all required JSON arguments
                 if arguments:
-                    for argument, validate in arguments.items():
+                    for argument, validation in arguments.items():
 
                         # If the argument is missing respond with 400 Bad Request
                         if argument not in body:
-                            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Missing argument")
+                            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = f"Missing argument '{argument}'")
 
                         # Try to validate the argument
                         try:
-                            value = validate(body[argument])
 
-                            # Update the body if an updated value was returned by the validation
-                            if value:
-                                body[argument] = value
+                            # If the validation is a function use it directly
+                            if callable(validation):
+                                value = validation(body[argument])
+
+                            # Else use the provided arguments for validation
+                            else:
+                                value = validation["function"](
+                                    body[argument],
+                                    *validation.get("arguments", validation.get("args", ())),
+                                    **validation.get("keyword_arguments", validation.get("kwargs", {}))
+                                )
 
                         # If the argument validation failed respond with 400 Bad Request
                         except ValidationError as reason:
-                            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = str(reason))
+                            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = f"Argument '{argument}' invalid: {reason}")
+
+                        # Update the body if an updated value was returned by the validation
+                        if value:
+                            body[argument] = value
 
                 # Call the handler function
                 return handler(JSONRequest(

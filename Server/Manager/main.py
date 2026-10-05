@@ -96,7 +96,13 @@ def job_rules(request: Request) -> JSONResponse:
 @main.POST("/job/claim")
 @main.requires_json({
     "worker_uuid": validation.uuid,
-    "size": validation.job_size
+    "size": {
+        "function": validation.integer,
+        "arguments": (
+            settings.job_minimum_size,
+            settings.job_maximum_size
+        )
+    }
 })
 def claim_job(request: JSONRequest) -> TextResponse | JSONResponse:
 
