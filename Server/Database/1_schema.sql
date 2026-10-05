@@ -2,14 +2,15 @@
 -- Custom unsigned 64-Bit integer type
 -- ================================================================================================
 CREATE DOMAIN ui64 AS numeric(20, 0) CHECK (
-    VALUE >= 0 AND
+    VALUE >= 0
+    AND
     VALUE <= 18446744073709551615
 );
 
 -- Alternative unsigned 64-Bit integer type using bigint
 -- Can be used as a drop in replacement for the numeric ui64 type
 -- Is significantly faster than using numeric but only allows values up to 2⁶⁴/2-1
--- CREATE DOMAIN ui64_2 AS bigint CHECK (VALUE >= 0);
+-- CREATE DOMAIN ui64 AS bigint CHECK (VALUE >= 0);
 
 -- ================================================================================================
 -- Search table
@@ -22,7 +23,10 @@ CREATE TABLE search (
 
     -- Search index values
     next_index ui64 NOT NULL,
-    completed_index ui64 NOT NULL CHECK (completed_index <= next_index)
+    completed_index ui64 NOT NULL CHECK (completed_index <= next_index),
+
+    -- Timestamp for when the search was updated
+    updated_at timestamp(6) with time zone NOT NULL DEFAULT clock_timestamp()
 
 );
 
@@ -63,11 +67,11 @@ CREATE TABLE workers (
     status worker_status NOT NULL DEFAULT 'connected',
 
     -- Timestamp of when the worker connected
-    connected_at timestamp(6) with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    connected_at timestamp(6) with time zone NOT NULL DEFAULT clock_timestamp(),
 
     -- Timestamp of the last time the worker was active
     -- The initial value defaults to the current date and time as the first activity
-    active_at timestamp(6) with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    active_at timestamp(6) with time zone NOT NULL DEFAULT clock_timestamp(),
 
     -- Timestamp of when the worker disconnected
     -- Must be set if the status is "disconnected" else must be "NULL"
@@ -144,7 +148,7 @@ CREATE TABLE jobs (
     end_index ui64 NOT NULL UNIQUE CHECK (end_index > start_index),
 
     -- The search index the worker has reached
-    index ui64 NOT NULL CHECK (
+    index ui64 NOT NULL CONSTRAINT jobs_index_check CHECK (
         index >= start_index
         AND
         index <= end_index
@@ -154,16 +158,15 @@ CREATE TABLE jobs (
     solutions ui64 NOT NULL DEFAULT 0,
 
     -- Timestamp of when the job was created
-    created_at timestamp(6) with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    created_at timestamp(6) with time zone NOT NULL DEFAULT clock_timestamp(),
 
     -- Timestamp of when the job was claimed by a worker
     -- Defaults to the current date and time
-    claimed_at timestamp(6) with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    claimed_at timestamp(6) with time zone NOT NULL DEFAULT clock_timestamp(),
 
     -- Timestamp of when the job was updated
     -- Defaults to the current date and time as the first update
-    -- Is automatically updated by a trigger function
-    updated_at timestamp(6) with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at timestamp(6) with time zone NOT NULL DEFAULT clock_timestamp(),
 
     -- Timestamp of when the job expired
     -- Must be set if the status is "expired" else must be "NULL"
@@ -207,10 +210,25 @@ CREATE TABLE jobs (
 
 );
 
--- Create indices for the jobs table
-CREATE INDEX ON jobs (worker_id);
-CREATE INDEX ON jobs (id) WHERE status IN ('expired', 'canceled', 'terminated');
-CREATE INDEX ON jobs (id) WHERE status = 'claimed';
+-- Create an index for the worker_id foreign key
+CREATE INDEX jobs_worker_id_index
+ON jobs (worker_id);
+
+-- Create a unique index for for the worker_id where the job status is claimed
+-- This prevents a worker from claiming 2 jobs at the same time
+CREATE UNIQUE INDEX jobs_worker_id_claimed_unique_index
+ON jobs (worker_id)
+WHERE status = 'claimed';
+
+-- Create an index for the jobs id where the job status is failed
+CREATE INDEX jobs_id_failed_index
+ON jobs (id)
+WHERE status IN ('expired', 'canceled', 'terminated');
+
+-- Create an index for the jobs id where the job status is claimed
+CREATE INDEX jobs_id_claimed_index
+ON jobs (id)
+WHERE status = 'claimed';
 
 -- ================================================================================================
 -- Job history table
@@ -246,10 +264,14 @@ CREATE TABLE job_history (
     solutions ui64 NOT NULL,
 
     -- Timestamp of the capture
-    captured_at timestamp(6) with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+    captured_at timestamp(6) with time zone NOT NULL DEFAULT clock_timestamp()
 
 );
 
--- Create indices for the job_history table
-CREATE INDEX ON job_history (job_id);
-CREATE INDEX ON job_history (worker_id);
+-- Create an index for the job_id foreign key
+CREATE INDEX job_history_job_id_index
+ON job_history (job_id);
+
+-- Create an index for the worker_id foreign key
+CREATE INDEX job_history_worker_id_index
+ON job_history (worker_id);

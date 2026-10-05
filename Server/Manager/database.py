@@ -61,7 +61,7 @@ def initialize():
                 UPDATE workers
                 SET
                     status = 'terminated',
-                    terminated_at = CURRENT_TIMESTAMP(6)
+                    terminated_at = clock_timestamp()
                 WHERE status = 'connected';
             """)
 
@@ -70,7 +70,7 @@ def initialize():
                 UPDATE jobs
                 SET
                     status = 'terminated',
-                    terminated_at = CURRENT_TIMESTAMP(6)
+                    terminated_at = clock_timestamp()
                 WHERE status = 'claimed';
             """)
 
