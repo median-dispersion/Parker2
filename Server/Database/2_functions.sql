@@ -313,3 +313,64 @@ BEGIN
 
 END;
 $$;
+
+-- ================================================================================================
+-- Cancel a job
+-- ================================================================================================
+CREATE FUNCTION cancel_job(
+    p_job_uuid uuid,
+    p_attempt bigint,
+    p_reason text,
+    p_worker_uuid uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+
+-- Function variables
+DECLARE v_worker_id bigint;
+
+-- Function logic
+BEGIN
+
+    -- Raise an exception if the attempt is invalid
+    IF p_attempt IS NULL OR p_attempt < 1 THEN
+        RAISE EXCEPTION 'Invalid attempt';
+    END IF;
+
+    -- Raise an exception if the reason is empty
+    IF p_reason IS NULL OR p_reason = '' THEN
+        RAISE EXCEPTION 'Reason is empty';
+    END IF;
+
+    -- Try to update the worker and get its ID
+    UPDATE workers
+    SET active_at = clock_timestamp()
+    WHERE uuid = p_worker_uuid
+    AND status = 'connected'
+    RETURNING id
+    INTO v_worker_id;
+
+    -- Raise an exception if the worker is not connected
+    IF v_worker_id IS NULL THEN
+        RAISE EXCEPTION 'Worker not connected';
+    END IF;
+
+    -- Try to update the job
+    UPDATE jobs
+    SET
+        status = 'canceled',
+        cancellation_reason = p_reason,
+        canceled_at = clock_timestamp()
+    WHERE uuid = p_job_uuid
+    AND status = 'claimed'
+    AND attempt = p_attempt
+    AND worker_id = v_worker_id;
+
+    -- Raise an exception if the job is not found
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'No matching job';
+    END IF;
+
+END;
+$$;

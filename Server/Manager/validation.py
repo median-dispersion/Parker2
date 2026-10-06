@@ -10,6 +10,10 @@ class ValidationError(ValueError): pass
 # =================================================================================================
 def worker_name(name: str) -> str:
 
+    # Raise an exception if the name is not a string
+    if not isinstance(name, str):
+        raise ValidationError("Name is not a string")
+
     # Raise an exception if the name is too short
     if len(name) < 1:
         raise ValidationError("Name too short")
@@ -20,7 +24,7 @@ def worker_name(name: str) -> str:
 
     # Raise an exception if the name contains illegal characters
     if not re.fullmatch("[a-zA-Z0-9-]+", name):
-        raise ValidationError("Invalid name")
+        raise ValidationError("Illegal characters in name")
 
     # Return the worker name
     return name
@@ -52,7 +56,7 @@ def integer(
 
     # Raise an exception if type is incorrect
     if not isinstance(integer, int):
-        raise ValidationError("Invalid integer")
+        raise ValidationError("Value is not an integer")
 
     # Raise an exception if the integer is too small
     if minimum:
@@ -66,3 +70,23 @@ def integer(
 
     # Return the validated integer
     return integer
+
+# =================================================================================================
+# Cancellation reason
+# =================================================================================================
+def cancellation_reason(reason: str) -> str:
+
+    # Raise an exception if the reason is not a string
+    if not isinstance(reason, str):
+        raise ValidationError("Reason is not a string")
+
+    # Raise an exception if the reason is missing / too short
+    if len(reason) < 1:
+        raise ValidationError("Missing reason")
+
+    # If the reason is too long clip it to a maximum of 1 million characters (roughly 1 MB of text)
+    if len(reason) > 1_000_000:
+        reason = reason[:1_000_000]
+
+    # Return the validated reason
+    return reason
