@@ -59,12 +59,12 @@ def integer(
         raise ValidationError("Value is not an integer")
 
     # Raise an exception if the integer is too small
-    if minimum:
+    if minimum != None:
         if integer < minimum:
             raise ValidationError("Integer too small")
 
     # Raise an exception if the integer is too large
-    if maximum:
+    if maximum != None:
         if integer > maximum:
             raise ValidationError("Integer too large")
 

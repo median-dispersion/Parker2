@@ -332,3 +332,68 @@ def finish_job(request: JSONRequest) -> TextResponse | None:
 
         # If the exception is about something else respond re-raise it
         raise
+
+# =================================================================================================
+# An endpoint for submitting a solution
+# =================================================================================================
+@main.POST("/solution/submit")
+@main.requires_json({
+    "worker_uuid": validation.uuid,
+    "job_uuid": validation.uuid,
+    "a": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
+    "b": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
+    "c": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
+    "d": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
+    "e": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
+    "f": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
+    "g": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
+    "h": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
+    "i": {"function": validation.integer, "arguments": (0, 18446744073709551615)}
+})
+def submit_solution(request: JSONRequest):
+
+    # Get the request body
+    body = request.body_dict
+
+    # Get the required UUIDs
+    worker_uuid = body["worker_uuid"]
+    job_uuid = body["job_uuid"]
+
+    # Get the solution values
+    a = body["a"]
+    b = body["b"]
+    c = body["c"]
+    d = body["d"]
+    e = body["e"]
+    f = body["f"]
+    g = body["g"]
+    h = body["h"]
+    i = body["i"]
+
+    # Try to submit a solution
+    try:
+        with pool.connection() as connection:
+            with connection.transaction():
+                connection.execute(t"""
+                    SELECT submit_solution(
+                        {worker_uuid},
+                        {job_uuid},
+                        {a}, {b}, {c},
+                        {d}, {e}, {f},
+                        {g}, {h}, {i}
+                    );
+                """)
+
+    # Catch database exceptions
+    except psycopg.errors.RaiseException as exception:
+
+        # If the worker is not connected respond with 400 Bad Request
+        if exception.diag.message_primary == "Worker not connected":
+            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker not connected")
+
+        # If the job is not found respond with 400 Bad Request
+        if exception.diag.message_primary == "No matching job":
+            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "No matching job")
+
+        # If the exception is about something else respond re-raise it
+        raise

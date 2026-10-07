@@ -275,3 +275,42 @@ ON job_history (job_id);
 -- Create an index for the worker_id foreign key
 CREATE INDEX job_history_worker_id_index
 ON job_history (worker_id);
+
+-- ================================================================================================
+-- Solutions table
+-- ================================================================================================
+CREATE TABLE solutions (
+
+    -- Solution identification
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    uuid uuid NOT NULL UNIQUE DEFAULT uuidv4(),
+
+    -- The worker that found the solution
+    worker_id bigint NOT NULL REFERENCES workers(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+
+    -- A reference to the job the solution was found in
+    job_id bigint NOT NULL REFERENCES workers(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+
+    -- Solution values
+    a ui64 NOT NULL,
+    b ui64 NOT NULL,
+    c ui64 NOT NULL,
+    d ui64 NOT NULL,
+    e ui64 NOT NULL,
+    f ui64 NOT NULL,
+    g ui64 NOT NULL,
+    h ui64 NOT NULL,
+    i ui64 NOT NULL,
+
+    -- Timestamp of when the solution was submitted
+    submitted_at timestamp(6) with time zone NOT NULL DEFAULT clock_timestamp()
+
+);
+
+-- Create an index for the worker_id foreign key
+CREATE INDEX solutions_worker_id_index
+ON solutions (worker_id);
+
+-- Create an index for the job_id foreign key
+CREATE INDEX solutions_job_id_index
+ON solutions (job_id);

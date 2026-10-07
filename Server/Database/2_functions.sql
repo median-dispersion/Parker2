@@ -541,3 +541,102 @@ BEGIN
 
 END;
 $$;
+
+-- ================================================================================================
+-- Submit a solution
+-- ================================================================================================
+CREATE FUNCTION submit_solution(
+    p_worker_uuid uuid,
+    p_job_uuid uuid,
+    p_a ui64,
+    p_b ui64,
+    p_c ui64,
+    p_d ui64,
+    p_e ui64,
+    p_f ui64,
+    p_g ui64,
+    p_h ui64,
+    p_i ui64
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+
+-- Function variables
+DECLARE
+    v_worker_id bigint;
+    v_job_id bigint;
+
+-- Function logic
+BEGIN
+
+    -- Raise an exception if the worker UUID is missing
+    IF p_worker_uuid IS NULL THEN
+        RAISE EXCEPTION 'Invalid worker UUID';
+    END IF;
+
+    -- Raise an exception if the job UUID is missing
+    IF p_job_uuid IS NULL THEN
+        RAISE EXCEPTION 'Invalid job UUID';
+    END IF;
+
+    -- Raise an exception if a solution parameter is missing
+    IF
+        p_a IS NULL OR
+        p_b IS NULL OR
+        p_c IS NULL OR
+        p_d IS NULL OR
+        p_e IS NULL OR
+        p_f IS NULL OR
+        p_g IS NULL OR
+        p_h IS NULL OR
+        p_i IS NULL
+    THEN
+        RAISE EXCEPTION 'Missing parameter';
+    END IF;
+
+    -- Try to update the worker and get its ID
+    UPDATE workers
+    SET active_at = clock_timestamp()
+    WHERE uuid = p_worker_uuid
+    AND status = 'connected'
+    RETURNING id
+    INTO v_worker_id;
+
+    -- Raise an exception if the worker is not connected
+    IF v_worker_id IS NULL THEN
+        RAISE EXCEPTION 'Worker not connected';
+    END IF;
+
+    -- Get the job ID and lock it
+    -- The lock isn't really necessary
+    -- But it prevents the job form being change before the solution is submitted
+    SELECT id
+    INTO v_job_id
+    FROM jobs
+    WHERE uuid = p_job_uuid
+    AND status = 'claimed'
+    FOR UPDATE;
+
+    -- Raise an exception if the job is not found
+    IF v_job_id IS NULL THEN
+        RAISE EXCEPTION 'No matching job';
+    END IF;
+
+    -- Insert the solution
+    INSERT INTO solutions(
+        worker_id,
+        job_id,
+        a, b ,c,
+        d, e, f,
+        g, h, i
+    ) VALUES (
+        v_worker_id,
+        v_job_id,
+        p_a, p_b, p_c,
+        p_d, p_e, p_f,
+        p_g, p_h, p_i
+    );
+
+END;
+$$;
