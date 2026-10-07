@@ -84,6 +84,11 @@ DECLARE v_worker_id bigint;
 -- Function logic
 BEGIN
 
+    -- Raise an exception if the worker UUID is missing
+    IF p_uuid IS NULL THEN
+        RAISE EXCEPTION 'Invalid worker UUID';
+    END IF;
+
     -- Try to disconnect the worker
     UPDATE workers
     SET
@@ -134,6 +139,11 @@ DECLARE
 
 -- Function logic
 BEGIN
+
+    -- Raise an exception if the worker UUID is missing
+    IF p_worker_uuid IS NULL THEN
+        RAISE EXCEPTION 'Invalid worker UUID';
+    END IF;
 
     -- Raise an exception if the job size is invalid
     IF p_size IS NULL OR p_size < 1 THEN
@@ -275,9 +285,29 @@ DECLARE v_worker_id bigint;
 -- Function logic
 BEGIN
 
+    -- Raise an exception if the job UUID is missing
+    IF p_job_uuid IS NULL THEN
+        RAISE EXCEPTION 'Invalid job UUID';
+    END IF;
+
     -- Raise an exception if the attempt is invalid
     IF p_attempt IS NULL OR p_attempt < 1 THEN
-        RAISE EXCEPTION 'Invalid attempt';
+        RAISE EXCEPTION 'Invalid attempt count';
+    END IF;
+
+    -- Raise an exception if the worker UUID is missing
+    IF p_worker_uuid IS NULL THEN
+        RAISE EXCEPTION 'Invalid worker UUID';
+    END IF;
+
+    -- Raise an exception if the search index is missing
+    IF p_index IS NULL THEN
+        RAISE EXCEPTION 'Invalid search index';
+    END IF;
+
+    -- Raise an exception if the number of solutions is missing
+    IF p_solutions IS NULL THEN
+        RAISE EXCEPTION 'Invalid number of solutions';
     END IF;
 
     -- Try to update the worker and get its ID
@@ -294,6 +324,7 @@ BEGIN
     END IF;
 
     -- Try to update the job
+    -- Only allow the job update to advance the values never regress
     UPDATE jobs
     SET
         index = p_index,
@@ -333,14 +364,24 @@ DECLARE v_worker_id bigint;
 -- Function logic
 BEGIN
 
+    -- Raise an exception if the job UUID is missing
+    IF p_job_uuid IS NULL THEN
+        RAISE EXCEPTION 'Invalid job UUID';
+    END IF;
+
     -- Raise an exception if the attempt is invalid
     IF p_attempt IS NULL OR p_attempt < 1 THEN
-        RAISE EXCEPTION 'Invalid attempt';
+        RAISE EXCEPTION 'Invalid attempt count';
     END IF;
 
     -- Raise an exception if the reason is empty
     IF p_reason IS NULL OR p_reason = '' THEN
         RAISE EXCEPTION 'Reason is empty';
+    END IF;
+
+    -- Raise an exception if the worker UUID is missing
+    IF p_worker_uuid IS NULL THEN
+        RAISE EXCEPTION 'Invalid worker UUID';
     END IF;
 
     -- Try to update the worker and get its ID
@@ -356,7 +397,7 @@ BEGIN
         RAISE EXCEPTION 'Worker not connected';
     END IF;
 
-    -- Try to update the job
+    -- Try to cancel the job
     UPDATE jobs
     SET
         status = 'canceled',
@@ -370,6 +411,132 @@ BEGIN
     -- Raise an exception if the job is not found
     IF NOT FOUND THEN
         RAISE EXCEPTION 'No matching job';
+    END IF;
+
+END;
+$$;
+
+-- ================================================================================================
+-- Finish a job
+-- ================================================================================================
+CREATE FUNCTION finish_job(
+    p_job_uuid uuid,
+    p_attempt bigint,
+    p_worker_uuid uuid,
+    p_solutions ui64
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+
+-- Function variables
+DECLARE
+    v_worker_id bigint;
+    v_completed_index ui64;
+    v_end_index ui64;
+    v_completed_jobs_count bigint;
+
+-- Function logic
+BEGIN
+
+    -- Raise an exception if the job UUID is missing
+    IF p_job_uuid IS NULL THEN
+        RAISE EXCEPTION 'Invalid job UUID';
+    END IF;
+
+    -- Raise an exception if the attempt is invalid
+    IF p_attempt IS NULL OR p_attempt < 1 THEN
+        RAISE EXCEPTION 'Invalid attempt count';
+    END IF;
+
+    -- Raise an exception if the worker UUID is missing
+    IF p_worker_uuid IS NULL THEN
+        RAISE EXCEPTION 'Invalid worker UUID';
+    END IF;
+
+    -- Raise an exception if the number of solutions is missing
+    IF p_solutions IS NULL THEN
+        RAISE EXCEPTION 'Invalid number of solutions';
+    END IF;
+
+    -- Try to update the worker and get its ID
+    UPDATE workers
+    SET active_at = clock_timestamp()
+    WHERE uuid = p_worker_uuid
+    AND status = 'connected'
+    RETURNING id
+    INTO v_worker_id;
+
+    -- Raise an exception if the worker is not connected
+    IF v_worker_id IS NULL THEN
+        RAISE EXCEPTION 'Worker not connected';
+    END IF;
+
+    -- Try to finish the job
+    UPDATE jobs
+    SET
+        status = 'finished',
+        index = end_index,
+        solutions = p_solutions,
+        updated_at = clock_timestamp(),
+        finished_at = clock_timestamp()
+    WHERE uuid = p_job_uuid
+    AND status = 'claimed'
+    AND attempt = p_attempt
+    AND worker_id = v_worker_id
+    AND solutions <= p_solutions;
+
+    -- Raise an exception if the job is not found
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'No matching job';
+    END IF;
+
+    -- Select the current completed index of the search and lock it
+    SELECT completed_index
+    INTO v_completed_index
+    FROM search
+    WHERE id = 1
+    FOR UPDATE;
+
+    -- Set the last completed job end index to the current completed index of the search
+    v_end_index := v_completed_index;
+
+    -- Set the number of completed jobs to 0
+    v_completed_jobs_count := 0;
+
+    -- Loop over the finished jobs
+    LOOP
+
+        -- Complete 1 finished job
+        -- Where the start index of the finished job
+        -- Overlaps with the end index of the last completed job
+        -- This completed all finished jobs in order without gaps
+        UPDATE jobs
+        SET
+            status = 'completed',
+            completed_at = clock_timestamp()
+        WHERE start_index = v_end_index
+        AND status = 'finished'
+        RETURNING end_index
+        INTO v_end_index;
+
+        -- If no job was completed exit the loop
+        IF v_end_index IS NULL THEN
+            EXIT;
+        END IF;
+
+        -- If a job was completed advance the completed index and increase the count
+        v_completed_index := v_end_index;
+        v_completed_jobs_count := v_completed_jobs_count + 1;
+
+    END LOOP;
+
+    -- Advance the completed index of the search to the end index of the last completed job
+    -- If at least 1 job was completed
+    IF v_completed_jobs_count > 0 THEN
+        UPDATE search
+        SET completed_index = v_completed_index
+        WHERE id = 1;
     END IF;
 
 END;

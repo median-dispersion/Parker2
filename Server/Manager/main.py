@@ -227,7 +227,7 @@ def update_job(request: JSONRequest) -> TextResponse | None:
         "arguments": (1, 9223372036854775807)
     },
     "reason": validation.cancellation_reason,
-    "worker_uuid": validation.uuid,
+    "worker_uuid": validation.uuid
 })
 def cancel_job(request: JSONRequest) -> TextResponse | None:
 
@@ -256,6 +256,66 @@ def cancel_job(request: JSONRequest) -> TextResponse | None:
                         {attempt},
                         {reason},
                         {worker_uuid}
+                    );
+                """)
+
+    # Catch database exceptions
+    except psycopg.errors.RaiseException as exception:
+
+        # If the worker is not connected respond with 400 Bad Request
+        if exception.diag.message_primary == "Worker not connected":
+            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker not connected")
+
+        # If the job is not claimed by the worker respond with 400 Bad Request
+        if exception.diag.message_primary == "No matching job":
+            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "No matching job")
+
+        # If the exception is about something else respond re-raise it
+        raise
+
+# =================================================================================================
+# An endpoint for finishing a job
+# =================================================================================================
+@main.POST("/job/finish")
+@main.requires_json({
+    "job_uuid": validation.uuid,
+    "attempt": {
+        "function": validation.integer,
+        "arguments": (1, 9223372036854775807)
+    },
+    "worker_uuid": validation.uuid,
+    "solutions": {
+        "function": validation.integer,
+        "arguments": (0, 18446744073709551615)
+    }
+})
+def finish_job(request: JSONRequest) -> TextResponse | None:
+
+    # Get the request body
+    body = request.body_dict
+
+    # Get the job UUID
+    job_uuid = body["job_uuid"]
+
+    # Get the job attempt count
+    attempt = body["attempt"]
+
+    # Get the worker UUID
+    worker_uuid = body["worker_uuid"]
+
+    # Get the number of found solutions
+    solutions = body["solutions"]
+
+    # Try to finish a job
+    try:
+        with pool.connection() as connection:
+            with connection.transaction():
+                connection.execute(t"""
+                    SELECT finish_job(
+                        {job_uuid},
+                        {attempt},
+                        {worker_uuid},
+                        {solutions}
                     );
                 """)
 
