@@ -18,7 +18,7 @@ OBJECTS = $(patsubst %.cpp, $(BUILD_DIRECTORY)/%.o, $(SOURCES))
 TARGET = main
 
 # Default build rule
-all: clean $(TARGET)
+all: $(TARGET)
 
 # Link object files to create executable
 $(TARGET): $(OBJECTS)
