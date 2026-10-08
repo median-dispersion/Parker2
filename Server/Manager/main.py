@@ -9,6 +9,39 @@ import settings
 main = WSGI()
 
 # =================================================================================================
+# Handle database errors and return the appropriate HTTP response
+# =================================================================================================
+def handle_database_errors(error: psycopg.Error) -> TextResponse:
+
+    # If the error if of type "DatabaseError"
+    if isinstance(error, psycopg.DatabaseError):
+
+        # M0001 means there is an actual error in the program logic
+        # It is not handled and instead re-raised showing up the the error log
+
+        # If the worker is not connected respond with 400 Bad Request
+        if error.sqlstate == "M0002":
+            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = error.diag.message_primary)
+
+        # If no matching job was found respond with 400 Bad Request
+        if error.sqlstate == "M0003":
+            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = error.diag.message_primary)
+
+        # If the worker already claimed a job respond with 400 Bad Request
+        if error.sqlstate == "M0004":
+            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = error.diag.message_primary)
+
+    # If the error is of type "CheckViolation"
+    if isinstance(error, psycopg.errors.CheckViolation):
+
+        # If the job index is out of range respond with 400 Bad Request
+        if error.diag.constraint_name == "jobs_index_check":
+            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Index out of range")
+
+    # If the error is not handled re-raise it
+    raise
+
+# =================================================================================================
 # An endpoint for workers to connect to the manager
 # =================================================================================================
 @main.POST("/worker/connect")
@@ -46,15 +79,9 @@ def disconnect_worker(request: JSONRequest) -> TextResponse | None:
             with connection.transaction():
                 connection.execute(t"SELECT disconnect_worker({uuid});")
 
-    # Catch database exceptions
-    except psycopg.errors.RaiseException as exception:
-
-        # If the worker is not connected respond with 400 Bad Request
-        if exception.diag.message_primary == "Worker not connected":
-            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker not connected")
-
-        # If the exception is about something else respond re-raise it
-        raise
+    # Handle database errors and return the appropriate HTTP response
+    except psycopg.Error as error:
+        return handle_database_errors(error)
 
 # =================================================================================================
 # An endpoint for getting the job rules
@@ -79,23 +106,15 @@ def job_rules(request: Request) -> JSONResponse:
 @main.POST("/job/claim")
 @main.requires_json({
     "worker_uuid": validation.uuid,
-    "size": {
-        "function": validation.integer,
-        "arguments": (
-            settings.job_minimum_size,
-            settings.job_maximum_size
-        )
-    }
+    "size": validation.job_size
 })
 def claim_job(request: JSONRequest) -> TextResponse | JSONResponse:
 
     # Get the request body
     body = request.body_dict
 
-    # Get the worker UUID
+    # Get the required arguments
     worker_uuid = body["worker_uuid"]
-
-    # Get the job size
     size = body["size"]
 
     # Try to claim a job
@@ -115,19 +134,9 @@ def claim_job(request: JSONRequest) -> TextResponse | JSONResponse:
                     );
                 """).fetchone()
 
-    # Catch database exceptions
-    except psycopg.errors.RaiseException as exception:
-
-        # If the worker is not connected respond with 400 Bad Request
-        if exception.diag.message_primary == "Worker not connected":
-            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker not connected")
-
-        # If the worker already claimed a job respond with 400 Bad Request
-        if exception.diag.message_primary == "Worker already claimed a job":
-            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker already claimed a job")
-
-        # If the exception is about something else respond re-raise it
-        raise
+    # Handle database errors and return the appropriate HTTP response
+    except psycopg.Error as error:
+        return handle_database_errors(error)
 
     # Return the claimed job and respond with 200 OK
     return JSONResponse(
@@ -145,39 +154,22 @@ def claim_job(request: JSONRequest) -> TextResponse | JSONResponse:
 # =================================================================================================
 @main.POST("/job/update")
 @main.requires_json({
-    "job_uuid": validation.uuid,
-    "attempt": {
-        "function": validation.integer,
-        "arguments": (1, 9223372036854775807)
-    },
+    "uuid": validation.uuid,
+    "attempt": validation.job_attempt,
     "worker_uuid": validation.uuid,
-    "index": {
-        "function": validation.integer,
-        "arguments": (0, 18446744073709551615)
-    },
-    "solutions": {
-        "function": validation.integer,
-        "arguments": (0, 18446744073709551615)
-    }
+    "index": validation.ui64,
+    "solutions": validation.ui64
 })
 def update_job(request: JSONRequest) -> TextResponse | None:
 
     # Get the request body
     body = request.body_dict
 
-    # Get the job UUID
-    job_uuid = body["job_uuid"]
-
-    # Get the job attempt count
+    # Get the required arguments
+    uuid = body["uuid"]
     attempt = body["attempt"]
-
-    # Get the worker UUID
     worker_uuid = body["worker_uuid"]
-
-    # Get the current search index
     index = body["index"]
-
-    # Get the number of found solutions
     solutions = body["solutions"]
 
     # Try to update the job
@@ -186,7 +178,7 @@ def update_job(request: JSONRequest) -> TextResponse | None:
             with connection.transaction():
                 connection.execute(t"""
                     SELECT update_job(
-                        {job_uuid},
+                        {uuid},
                         {attempt},
                         {worker_uuid},
                         {index},
@@ -194,39 +186,18 @@ def update_job(request: JSONRequest) -> TextResponse | None:
                     );
                 """)
 
-    # Catch database errors
-    except psycopg.Error as exception:
-
-        # The exception if of type RaiseException
-        if isinstance(exception, psycopg.errors.RaiseException):
-
-            # If the worker is not connected respond with 400 Bad Request
-            if exception.diag.message_primary == "Worker not connected":
-                return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker not connected")
-
-            # If the job is not claimed by the worker respond with 400 Bad Request
-            if exception.diag.message_primary == "No matching job":
-                return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "No matching job")
-
-        # If the current search index is out of range respond with 400 Bad Request
-        if isinstance(exception, psycopg.errors.CheckViolation):
-            if exception.diag.constraint_name == "jobs_index_check":
-                return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Index out of range")
-
-        # If the exception is about something else respond re-raise it
-        raise
+    # Handle database errors and return the appropriate HTTP response
+    except psycopg.Error as error:
+        return handle_database_errors(error)
 
 # =================================================================================================
 # An endpoint for canceling a job
 # =================================================================================================
 @main.POST("/job/cancel")
 @main.requires_json({
-    "job_uuid": validation.uuid,
-    "attempt": {
-        "function": validation.integer,
-        "arguments": (1, 9223372036854775807)
-    },
-    "reason": validation.cancellation_reason,
+    "uuid": validation.uuid,
+    "attempt": validation.job_attempt,
+    "cancellation_reason": validation.job_cancellation_reason,
     "worker_uuid": validation.uuid
 })
 def cancel_job(request: JSONRequest) -> TextResponse | None:
@@ -234,16 +205,10 @@ def cancel_job(request: JSONRequest) -> TextResponse | None:
     # Get the request body
     body = request.body_dict
 
-    # Get the job UUID
-    job_uuid = body["job_uuid"]
-
-    # Get the job attempt count
+    # Get the required arguments
+    uuid = body["uuid"]
     attempt = body["attempt"]
-
-    # Get the cancellation reason
-    reason = body["reason"]
-
-    # Get the worker UUID
+    cancellation_reason = body["cancellation_reason"]
     worker_uuid = body["worker_uuid"]
 
     # Try to cancel the job
@@ -252,58 +217,36 @@ def cancel_job(request: JSONRequest) -> TextResponse | None:
             with connection.transaction():
                 connection.execute(t"""
                     SELECT cancel_job(
-                        {job_uuid},
+                        {uuid},
                         {attempt},
-                        {reason},
+                        {cancellation_reason},
                         {worker_uuid}
                     );
                 """)
 
-    # Catch database exceptions
-    except psycopg.errors.RaiseException as exception:
-
-        # If the worker is not connected respond with 400 Bad Request
-        if exception.diag.message_primary == "Worker not connected":
-            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker not connected")
-
-        # If the job is not claimed by the worker respond with 400 Bad Request
-        if exception.diag.message_primary == "No matching job":
-            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "No matching job")
-
-        # If the exception is about something else respond re-raise it
-        raise
+    # Handle database errors and return the appropriate HTTP response
+    except psycopg.Error as error:
+        return handle_database_errors(error)
 
 # =================================================================================================
 # An endpoint for finishing a job
 # =================================================================================================
 @main.POST("/job/finish")
 @main.requires_json({
-    "job_uuid": validation.uuid,
-    "attempt": {
-        "function": validation.integer,
-        "arguments": (1, 9223372036854775807)
-    },
+    "uuid": validation.uuid,
+    "attempt": validation.job_attempt,
     "worker_uuid": validation.uuid,
-    "solutions": {
-        "function": validation.integer,
-        "arguments": (0, 18446744073709551615)
-    }
+    "solutions": validation.ui64
 })
 def finish_job(request: JSONRequest) -> TextResponse | None:
 
     # Get the request body
     body = request.body_dict
 
-    # Get the job UUID
-    job_uuid = body["job_uuid"]
-
-    # Get the job attempt count
+    # Get the required arguments
+    uuid = body["uuid"]
     attempt = body["attempt"]
-
-    # Get the worker UUID
     worker_uuid = body["worker_uuid"]
-
-    # Get the number of found solutions
     solutions = body["solutions"]
 
     # Try to finish a job
@@ -312,26 +255,16 @@ def finish_job(request: JSONRequest) -> TextResponse | None:
             with connection.transaction():
                 connection.execute(t"""
                     SELECT finish_job(
-                        {job_uuid},
+                        {uuid},
                         {attempt},
                         {worker_uuid},
                         {solutions}
                     );
                 """)
 
-    # Catch database exceptions
-    except psycopg.errors.RaiseException as exception:
-
-        # If the worker is not connected respond with 400 Bad Request
-        if exception.diag.message_primary == "Worker not connected":
-            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker not connected")
-
-        # If the job is not claimed by the worker respond with 400 Bad Request
-        if exception.diag.message_primary == "No matching job":
-            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "No matching job")
-
-        # If the exception is about something else respond re-raise it
-        raise
+    # Handle database errors and return the appropriate HTTP response
+    except psycopg.Error as error:
+        return handle_database_errors(error)
 
 # =================================================================================================
 # An endpoint for submitting a solution
@@ -340,22 +273,22 @@ def finish_job(request: JSONRequest) -> TextResponse | None:
 @main.requires_json({
     "worker_uuid": validation.uuid,
     "job_uuid": validation.uuid,
-    "a": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
-    "b": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
-    "c": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
-    "d": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
-    "e": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
-    "f": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
-    "g": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
-    "h": {"function": validation.integer, "arguments": (0, 18446744073709551615)},
-    "i": {"function": validation.integer, "arguments": (0, 18446744073709551615)}
+    "a": validation.ui64,
+    "b": validation.ui64,
+    "c": validation.ui64,
+    "d": validation.ui64,
+    "e": validation.ui64,
+    "f": validation.ui64,
+    "g": validation.ui64,
+    "h": validation.ui64,
+    "i": validation.ui64
 })
 def submit_solution(request: JSONRequest):
 
     # Get the request body
     body = request.body_dict
 
-    # Get the required UUIDs
+    # Get the required arguments
     worker_uuid = body["worker_uuid"]
     job_uuid = body["job_uuid"]
 
@@ -384,16 +317,6 @@ def submit_solution(request: JSONRequest):
                     );
                 """)
 
-    # Catch database exceptions
-    except psycopg.errors.RaiseException as exception:
-
-        # If the worker is not connected respond with 400 Bad Request
-        if exception.diag.message_primary == "Worker not connected":
-            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Worker not connected")
-
-        # If the job is not found respond with 400 Bad Request
-        if exception.diag.message_primary == "No matching job":
-            return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "No matching job")
-
-        # If the exception is about something else respond re-raise it
-        raise
+    # Handle database errors and return the appropriate HTTP response
+    except psycopg.Error as error:
+        return handle_database_errors(error)

@@ -289,7 +289,7 @@ CREATE TABLE solutions (
     worker_id bigint NOT NULL REFERENCES workers(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
 
     -- A reference to the job the solution was found in
-    job_id bigint NOT NULL REFERENCES workers(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    job_id bigint NOT NULL REFERENCES jobs(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
 
     -- Solution values
     a ui64 NOT NULL,

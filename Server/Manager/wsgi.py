@@ -4,7 +4,6 @@ from typing import Any
 import json
 from collections.abc import Callable
 from codecs import lookup as codecs_lookup
-from validation import ValidationError
 from urllib.parse import parse_qs
 from traceback import format_exc
 from sys import exc_info
@@ -321,6 +320,42 @@ class JSONRequest(Request):
         return self._encoding
 
 # =================================================================================================
+# JSON argument validator class
+# =================================================================================================
+class JSONArgumentValidator:
+
+    # =============================================================================================
+    # Custom validation error exception
+    # =============================================================================================
+    class ValidationError(ValueError):
+        pass
+
+    # =============================================================================================
+    # Initialization
+    # =============================================================================================
+    def __init__(
+        self,
+        function: Callable,
+        arguments: tuple[Any, ...] | None = None,
+        keyword_arguments: dict[str, Any] | None = None
+    ):
+
+        # Initialize member variables
+        self._function = function
+        self._arguments = arguments if arguments != None else ()
+        self._keyword_arguments = keyword_arguments if keyword_arguments != None else {}
+
+    # =============================================================================================
+    # Validate the JSON argument value
+    # =============================================================================================
+    def validate(self, value: Any) -> Any:
+        return self._function(
+            value,
+            *self._arguments,
+            **self._keyword_arguments
+        )
+
+# =================================================================================================
 # WSGI class
 # =================================================================================================
 class WSGI:
@@ -464,7 +499,7 @@ class WSGI:
     # Only allow requests that contain JSON content
     # =============================================================================================
     @staticmethod
-    def requires_json(arguments: dict[str, Any] | None = None) -> WSGI._RequestHandlerDecorator:
+    def requires_json(arguments: dict[str, JSONArgumentValidator] | None = None) -> WSGI._RequestHandlerDecorator:
 
         # Define a decorator that returns a wrapper around the request handler
         def decorator(handler: WSGI._RequestHandler) -> WSGI._RequestHandler:
@@ -535,7 +570,7 @@ class WSGI:
 
                 # Loop through all required JSON arguments
                 if arguments:
-                    for argument, validation in arguments.items():
+                    for argument, validator in arguments.items():
 
                         # If the argument is missing respond with 400 Bad Request
                         if argument not in body:
@@ -543,25 +578,14 @@ class WSGI:
 
                         # Try to validate the argument
                         try:
-
-                            # If the validation is a function use it directly
-                            if callable(validation):
-                                value = validation(body[argument])
-
-                            # Else use the provided arguments for validation
-                            else:
-                                value = validation["function"](
-                                    body[argument],
-                                    *validation.get("arguments", validation.get("args", ())),
-                                    **validation.get("keyword_arguments", validation.get("kwargs", {}))
-                                )
+                            value = validator.validate(body[argument])
 
                         # If the argument validation failed respond with 400 Bad Request
-                        except ValidationError as reason:
+                        except JSONArgumentValidator.ValidationError as reason:
                             return TextResponse(status = HTTPStatus.BAD_REQUEST, body = f"Argument '{argument}' invalid: {reason}")
 
                         # Update the body if an updated value was returned by the validation
-                        if value:
+                        if value != None:
                             body[argument] = value
 
                 # Call the handler function

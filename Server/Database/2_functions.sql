@@ -1,4 +1,68 @@
 -- ================================================================================================
+-- Helper function for raising an exception if a function parameters is invalid or missing
+-- ================================================================================================
+CREATE FUNCTION raise_m0001()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION USING
+        ERRCODE = 'M0001',
+        MESSAGE = 'Invalid or missing input parameters',
+        DETAIL = 'One or more input parameters to the function where invalid or are missing',
+        HINT = 'Check the input parameters and try again';
+END;
+$$;
+
+-- ================================================================================================
+-- Helper function for raising an exception if a worker is not connected
+-- ================================================================================================
+CREATE FUNCTION raise_m0002()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION USING
+        ERRCODE = 'M0002',
+        MESSAGE = 'Worker not connected',
+        DETAIL = 'No connected worker was found matching the identifying parameters',
+        HINT = 'Check the input parameters and try again';
+END;
+$$;
+
+-- ================================================================================================
+-- Helper function for raising an exception if no matching job was found
+-- ================================================================================================
+CREATE FUNCTION raise_m0003()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION USING
+        ERRCODE = 'M0003',
+        MESSAGE = 'No matching job',
+        DETAIL = 'No job was found matching the identifying parameters',
+        HINT = 'Check the input parameters and try again';
+END;
+$$;
+
+-- ================================================================================================
+-- Helper function for raising an exception if a worker already claimed a job
+-- ================================================================================================
+CREATE FUNCTION raise_m0004()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION USING
+        ERRCODE = 'M0004',
+        MESSAGE = 'Worker already claimed a job',
+        DETAIL = 'The provided worker already claimed a job',
+        HINT = 'The worker must finish or cancel the job before claiming a new one';
+END;
+$$;
+
+-- ================================================================================================
 -- Set the updated_at field of a row before updating
 -- ================================================================================================
 CREATE FUNCTION set_updated_at()
@@ -84,10 +148,8 @@ DECLARE v_worker_id bigint;
 -- Function logic
 BEGIN
 
-    -- Raise an exception if the worker UUID is missing
-    IF p_uuid IS NULL THEN
-        RAISE EXCEPTION 'Invalid worker UUID';
-    END IF;
+    -- Raise an exception if the input parameters are invalid or missing
+    IF p_uuid IS NULL THEN PERFORM raise_m0001(); END IF;
 
     -- Try to disconnect the worker
     UPDATE workers
@@ -101,9 +163,7 @@ BEGIN
     INTO v_worker_id;
 
     -- Raise an exception if the worker is not connected
-    IF v_worker_id IS NULL THEN
-        RAISE EXCEPTION 'Worker not connected';
-    END IF;
+    IF v_worker_id IS NULL THEN PERFORM raise_m0002(); END IF;
 
     -- Terminate all claimed jobs from this worker
     UPDATE jobs
@@ -140,19 +200,13 @@ DECLARE
 -- Function logic
 BEGIN
 
-    -- Raise an exception if the worker UUID is missing
-    IF p_worker_uuid IS NULL THEN
-        RAISE EXCEPTION 'Invalid worker UUID';
-    END IF;
-
-    -- Raise an exception if the job size is invalid
-    IF p_size IS NULL OR p_size < 1 THEN
-        RAISE EXCEPTION 'Invalid size';
-    END IF;
-
-    -- Raise an exception if the job timeout is invalid
-    IF p_timeout_seconds IS NULL OR p_timeout_seconds < 1 THEN
-        RAISE EXCEPTION 'Invalid timeout';
+    -- Raise an exception if the input parameters are invalid or missing
+    IF
+        p_worker_uuid IS NULL OR
+        p_size IS NULL OR p_size < 1 OR
+        p_timeout_seconds IS NULL OR p_timeout_seconds < 1
+    THEN
+        PERFORM raise_m0001();
     END IF;
 
     -- Try to update the worker and get its ID
@@ -164,13 +218,11 @@ BEGIN
     INTO v_worker_id;
 
     -- Raise an exception if the worker is not connected
-    IF v_worker_id IS NULL THEN
-        RAISE EXCEPTION 'Worker not connected';
-    END IF;
+    IF v_worker_id IS NULL THEN PERFORM raise_m0002(); END IF;
 
     -- Raise an exception if the worker already claimed a job
     IF EXISTS (SELECT FROM jobs WHERE worker_id = v_worker_id AND status = 'claimed') THEN
-        RAISE EXCEPTION 'Worker already claimed a job';
+        PERFORM raise_m0004();
     END IF;
 
     -- Try to find 1 failed job and lock it
@@ -269,7 +321,7 @@ $$;
 -- Update a job
 -- ================================================================================================
 CREATE FUNCTION update_job(
-    p_job_uuid uuid,
+    p_uuid uuid,
     p_attempt bigint,
     p_worker_uuid uuid,
     p_index ui64,
@@ -285,29 +337,15 @@ DECLARE v_worker_id bigint;
 -- Function logic
 BEGIN
 
-    -- Raise an exception if the job UUID is missing
-    IF p_job_uuid IS NULL THEN
-        RAISE EXCEPTION 'Invalid job UUID';
-    END IF;
-
-    -- Raise an exception if the attempt is invalid
-    IF p_attempt IS NULL OR p_attempt < 1 THEN
-        RAISE EXCEPTION 'Invalid attempt count';
-    END IF;
-
-    -- Raise an exception if the worker UUID is missing
-    IF p_worker_uuid IS NULL THEN
-        RAISE EXCEPTION 'Invalid worker UUID';
-    END IF;
-
-    -- Raise an exception if the search index is missing
-    IF p_index IS NULL THEN
-        RAISE EXCEPTION 'Invalid search index';
-    END IF;
-
-    -- Raise an exception if the number of solutions is missing
-    IF p_solutions IS NULL THEN
-        RAISE EXCEPTION 'Invalid number of solutions';
+    -- Raise an exception if the input parameters are invalid or missing
+    IF
+        p_uuid IS NULL OR
+        p_attempt IS NULL OR p_attempt < 1 OR
+        p_worker_uuid IS NULL OR
+        p_index IS NULL OR
+        p_solutions IS NULL
+    THEN
+        PERFORM raise_m0001();
     END IF;
 
     -- Try to update the worker and get its ID
@@ -319,9 +357,7 @@ BEGIN
     INTO v_worker_id;
 
     -- Raise an exception if the worker is not connected
-    IF v_worker_id IS NULL THEN
-        RAISE EXCEPTION 'Worker not connected';
-    END IF;
+    IF v_worker_id IS NULL THEN PERFORM raise_m0002(); END IF;
 
     -- Try to update the job
     -- Only allow the job update to advance the values never regress
@@ -330,7 +366,7 @@ BEGIN
         index = p_index,
         solutions = p_solutions,
         updated_at = clock_timestamp()
-    WHERE uuid = p_job_uuid
+    WHERE uuid = p_uuid
     AND status = 'claimed'
     AND attempt = p_attempt
     AND worker_id = v_worker_id
@@ -338,9 +374,7 @@ BEGIN
     AND solutions <= p_solutions;
 
     -- Raise an exception if the job is not found
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'No matching job';
-    END IF;
+    IF NOT FOUND THEN PERFORM raise_m0003(); END IF;
 
 END;
 $$;
@@ -349,9 +383,9 @@ $$;
 -- Cancel a job
 -- ================================================================================================
 CREATE FUNCTION cancel_job(
-    p_job_uuid uuid,
+    p_uuid uuid,
     p_attempt bigint,
-    p_reason text,
+    p_cancellation_reason text,
     p_worker_uuid uuid
 )
 RETURNS void
@@ -364,24 +398,14 @@ DECLARE v_worker_id bigint;
 -- Function logic
 BEGIN
 
-    -- Raise an exception if the job UUID is missing
-    IF p_job_uuid IS NULL THEN
-        RAISE EXCEPTION 'Invalid job UUID';
-    END IF;
-
-    -- Raise an exception if the attempt is invalid
-    IF p_attempt IS NULL OR p_attempt < 1 THEN
-        RAISE EXCEPTION 'Invalid attempt count';
-    END IF;
-
-    -- Raise an exception if the reason is empty
-    IF p_reason IS NULL OR p_reason = '' THEN
-        RAISE EXCEPTION 'Reason is empty';
-    END IF;
-
-    -- Raise an exception if the worker UUID is missing
-    IF p_worker_uuid IS NULL THEN
-        RAISE EXCEPTION 'Invalid worker UUID';
+    -- Raise an exception if the input parameters are invalid or missing
+    IF
+        p_uuid IS NULL OR
+        p_attempt IS NULL OR p_attempt < 1 OR
+        p_cancellation_reason IS NULL OR p_cancellation_reason = '' OR
+        p_worker_uuid IS NULL
+    THEN
+        PERFORM raise_m0001();
     END IF;
 
     -- Try to update the worker and get its ID
@@ -393,25 +417,21 @@ BEGIN
     INTO v_worker_id;
 
     -- Raise an exception if the worker is not connected
-    IF v_worker_id IS NULL THEN
-        RAISE EXCEPTION 'Worker not connected';
-    END IF;
+    IF v_worker_id IS NULL THEN PERFORM raise_m0002(); END IF;
 
     -- Try to cancel the job
     UPDATE jobs
     SET
         status = 'canceled',
-        cancellation_reason = p_reason,
+        cancellation_reason = p_cancellation_reason,
         canceled_at = clock_timestamp()
-    WHERE uuid = p_job_uuid
+    WHERE uuid = p_uuid
     AND status = 'claimed'
     AND attempt = p_attempt
     AND worker_id = v_worker_id;
 
     -- Raise an exception if the job is not found
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'No matching job';
-    END IF;
+    IF NOT FOUND THEN PERFORM raise_m0003(); END IF;
 
 END;
 $$;
@@ -420,7 +440,7 @@ $$;
 -- Finish a job
 -- ================================================================================================
 CREATE FUNCTION finish_job(
-    p_job_uuid uuid,
+    p_uuid uuid,
     p_attempt bigint,
     p_worker_uuid uuid,
     p_solutions ui64
@@ -439,24 +459,14 @@ DECLARE
 -- Function logic
 BEGIN
 
-    -- Raise an exception if the job UUID is missing
-    IF p_job_uuid IS NULL THEN
-        RAISE EXCEPTION 'Invalid job UUID';
-    END IF;
-
-    -- Raise an exception if the attempt is invalid
-    IF p_attempt IS NULL OR p_attempt < 1 THEN
-        RAISE EXCEPTION 'Invalid attempt count';
-    END IF;
-
-    -- Raise an exception if the worker UUID is missing
-    IF p_worker_uuid IS NULL THEN
-        RAISE EXCEPTION 'Invalid worker UUID';
-    END IF;
-
-    -- Raise an exception if the number of solutions is missing
-    IF p_solutions IS NULL THEN
-        RAISE EXCEPTION 'Invalid number of solutions';
+    -- Raise an exception if the input parameters are invalid or missing
+    IF
+        p_uuid IS NULL OR
+        p_attempt IS NULL OR p_attempt < 1 OR
+        p_worker_uuid IS NULL OR
+        p_solutions IS NULL
+    THEN
+        PERFORM raise_m0001();
     END IF;
 
     -- Try to update the worker and get its ID
@@ -468,9 +478,7 @@ BEGIN
     INTO v_worker_id;
 
     -- Raise an exception if the worker is not connected
-    IF v_worker_id IS NULL THEN
-        RAISE EXCEPTION 'Worker not connected';
-    END IF;
+    IF v_worker_id IS NULL THEN PERFORM raise_m0002(); END IF;
 
     -- Try to finish the job
     UPDATE jobs
@@ -480,16 +488,14 @@ BEGIN
         solutions = p_solutions,
         updated_at = clock_timestamp(),
         finished_at = clock_timestamp()
-    WHERE uuid = p_job_uuid
+    WHERE uuid = p_uuid
     AND status = 'claimed'
     AND attempt = p_attempt
     AND worker_id = v_worker_id
     AND solutions <= p_solutions;
 
     -- Raise an exception if the job is not found
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'No matching job';
-    END IF;
+    IF NOT FOUND THEN PERFORM raise_m0003(); END IF;
 
     -- Select the current completed index of the search and lock it
     SELECT completed_index
@@ -570,18 +576,10 @@ DECLARE
 -- Function logic
 BEGIN
 
-    -- Raise an exception if the worker UUID is missing
-    IF p_worker_uuid IS NULL THEN
-        RAISE EXCEPTION 'Invalid worker UUID';
-    END IF;
-
-    -- Raise an exception if the job UUID is missing
-    IF p_job_uuid IS NULL THEN
-        RAISE EXCEPTION 'Invalid job UUID';
-    END IF;
-
-    -- Raise an exception if a solution parameter is missing
+    -- Raise an exception if the input parameters are invalid or missing
     IF
+        p_worker_uuid IS NULL OR
+        p_job_uuid IS NULL OR
         p_a IS NULL OR
         p_b IS NULL OR
         p_c IS NULL OR
@@ -592,7 +590,7 @@ BEGIN
         p_h IS NULL OR
         p_i IS NULL
     THEN
-        RAISE EXCEPTION 'Missing parameter';
+        PERFORM raise_m0001();
     END IF;
 
     -- Try to update the worker and get its ID
@@ -604,9 +602,7 @@ BEGIN
     INTO v_worker_id;
 
     -- Raise an exception if the worker is not connected
-    IF v_worker_id IS NULL THEN
-        RAISE EXCEPTION 'Worker not connected';
-    END IF;
+    IF v_worker_id IS NULL THEN PERFORM raise_m0002(); END IF;
 
     -- Get the job ID and lock it
     -- The lock isn't really necessary
@@ -619,9 +615,7 @@ BEGIN
     FOR UPDATE;
 
     -- Raise an exception if the job is not found
-    IF v_job_id IS NULL THEN
-        RAISE EXCEPTION 'No matching job';
-    END IF;
+    IF v_job_id IS NULL THEN PERFORM raise_m0003(); END IF;
 
     -- Insert the solution
     INSERT INTO solutions(
