@@ -9,3 +9,6 @@ __pycache__
 # Ignore all environment files except example ones
 .env*
 !.env.example
+
+# Ignore all PostgreSQL files
+Server/PostgreSQL

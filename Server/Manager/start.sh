@@ -7,4 +7,4 @@ set -e
 python database.py initialize
 
 # Run Gunicorn
-gunicorn --bind $MANAGER_HOST:$MANAGER_PORT --workers $MANAGER_PROCESSES main:main
+exec gunicorn --bind $MANAGER_HOST:$MANAGER_PORT --workers $MANAGER_PROCESSES main:main

@@ -3,6 +3,11 @@ FROM debian:stable-slim
 
 # Set environment variables
 ENV PATH=$PATH:/Client/Worker/.venv/bin
+ENV WORKER_NAME=Worker
+ENV WORKER_THREADS=1
+ENV MANAGER_HOST=0.0.0.0
+ENV MANAGER_PORT=8000
+ENV MANAGER_PROTOCOL=http
 
 # Install system dependencies
 RUN apt-get update

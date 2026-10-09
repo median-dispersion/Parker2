@@ -4,4 +4,4 @@
 set -e
 
 # Start the workers
-python main.py
+exec python main.py
