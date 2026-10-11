@@ -102,8 +102,8 @@ BEGIN
         attempt,
         cancellation_reason,
         worker_id,
-        index,
-        solutions
+        current_index,
+        solutions_found
     )
     VALUES (
         NEW.id,
@@ -111,8 +111,8 @@ BEGIN
         NEW.attempt,
         NEW.cancellation_reason,
         NEW.worker_id,
-        NEW.index,
-        NEW.solutions
+        NEW.current_index,
+        NEW.solutions_found
     );
 
     -- Return (required by PL/pgSQL)
@@ -271,8 +271,8 @@ BEGIN
             attempt = attempt + 1,
             cancellation_reason = NULL,
             worker_id = v_worker_id,
-            index = start_index,
-            solutions = 0,
+            current_index = start_index,
+            solutions_found = 0,
             claimed_at = clock_timestamp(),
             updated_at = clock_timestamp(),
             expired_at = NULL,
@@ -300,7 +300,7 @@ BEGIN
         worker_id,
         start_index,
         end_index,
-        index
+        current_index
     )
     VALUES (
         v_worker_id,
@@ -325,7 +325,7 @@ CREATE FUNCTION update_job(
     p_attempt bigint,
     p_worker_uuid uuid,
     p_index ui64,
-    p_solutions ui64
+    p_solutions_found ui64
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -343,7 +343,7 @@ BEGIN
         p_attempt IS NULL OR p_attempt < 1 OR
         p_worker_uuid IS NULL OR
         p_index IS NULL OR
-        p_solutions IS NULL
+        p_solutions_found IS NULL
     THEN
         PERFORM raise_m0001();
     END IF;
@@ -363,15 +363,15 @@ BEGIN
     -- Only allow the job update to advance the values never regress
     UPDATE jobs
     SET
-        index = p_index,
-        solutions = p_solutions,
+        current_index = p_index,
+        solutions_found = p_solutions_found,
         updated_at = clock_timestamp()
     WHERE uuid = p_uuid
     AND status = 'claimed'
     AND attempt = p_attempt
     AND worker_id = v_worker_id
-    AND index <= p_index
-    AND solutions <= p_solutions;
+    AND current_index <= p_index
+    AND solutions_found <= p_solutions_found;
 
     -- Raise an exception if the job is not found
     IF NOT FOUND THEN PERFORM raise_m0003(); END IF;
@@ -443,7 +443,7 @@ CREATE FUNCTION finish_job(
     p_uuid uuid,
     p_attempt bigint,
     p_worker_uuid uuid,
-    p_solutions ui64
+    p_solutions_found ui64
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -464,7 +464,7 @@ BEGIN
         p_uuid IS NULL OR
         p_attempt IS NULL OR p_attempt < 1 OR
         p_worker_uuid IS NULL OR
-        p_solutions IS NULL
+        p_solutions_found IS NULL
     THEN
         PERFORM raise_m0001();
     END IF;
@@ -484,15 +484,15 @@ BEGIN
     UPDATE jobs
     SET
         status = 'finished',
-        index = end_index,
-        solutions = p_solutions,
+        current_index = end_index,
+        solutions_found = p_solutions_found,
         updated_at = clock_timestamp(),
         finished_at = clock_timestamp()
     WHERE uuid = p_uuid
     AND status = 'claimed'
     AND attempt = p_attempt
     AND worker_id = v_worker_id
-    AND solutions <= p_solutions;
+    AND solutions_found <= p_solutions_found;
 
     -- Raise an exception if the job is not found
     IF NOT FOUND THEN PERFORM raise_m0003(); END IF;

@@ -35,7 +35,7 @@ def handle_database_errors(error: psycopg.Error) -> TextResponse:
     if isinstance(error, psycopg.errors.CheckViolation):
 
         # If the job index is out of range respond with 400 Bad Request
-        if error.diag.constraint_name == "jobs_index_check":
+        if error.diag.constraint_name == "jobs_current_index_check":
             return TextResponse(status = HTTPStatus.BAD_REQUEST, body = "Index out of range")
 
     # If the error is not handled re-raise it
@@ -157,8 +157,8 @@ def claim_job(request: JSONRequest) -> TextResponse | JSONResponse:
     "uuid": validation.uuid,
     "attempt": validation.job_attempt,
     "worker_uuid": validation.uuid,
-    "index": validation.ui64,
-    "solutions": validation.ui64
+    "current_index": validation.ui64,
+    "solutions_found": validation.ui64
 })
 def update_job(request: JSONRequest) -> TextResponse | None:
 
@@ -169,8 +169,8 @@ def update_job(request: JSONRequest) -> TextResponse | None:
     uuid = body["uuid"]
     attempt = body["attempt"]
     worker_uuid = body["worker_uuid"]
-    index = body["index"]
-    solutions = body["solutions"]
+    current_index = body["current_index"]
+    solutions_found = body["solutions_found"]
 
     # Try to update the job
     try:
@@ -181,8 +181,8 @@ def update_job(request: JSONRequest) -> TextResponse | None:
                         {uuid},
                         {attempt},
                         {worker_uuid},
-                        {index},
-                        {solutions}
+                        {current_index},
+                        {solutions_found}
                     );
                 """)
 
@@ -236,7 +236,7 @@ def cancel_job(request: JSONRequest) -> TextResponse | None:
     "uuid": validation.uuid,
     "attempt": validation.job_attempt,
     "worker_uuid": validation.uuid,
-    "solutions": validation.ui64
+    "solutions_found": validation.ui64
 })
 def finish_job(request: JSONRequest) -> TextResponse | None:
 
@@ -247,7 +247,7 @@ def finish_job(request: JSONRequest) -> TextResponse | None:
     uuid = body["uuid"]
     attempt = body["attempt"]
     worker_uuid = body["worker_uuid"]
-    solutions = body["solutions"]
+    solutions_found = body["solutions_found"]
 
     # Try to finish a job
     try:
@@ -258,7 +258,7 @@ def finish_job(request: JSONRequest) -> TextResponse | None:
                         {uuid},
                         {attempt},
                         {worker_uuid},
-                        {solutions}
+                        {solutions_found}
                     );
                 """)
 

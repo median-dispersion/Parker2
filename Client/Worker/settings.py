@@ -1,5 +1,6 @@
 import os
 import re
+from pathlib import Path
 
 # Worker settings
 worker_name = os.getenv("WORKER_NAME", "Worker")
@@ -35,3 +36,10 @@ manager_url = f"{manager_protocol}://{manager_host}:{manager_port}"
 # Manager settings validation
 if manager_protocol not in ["http", "https"]:
     raise ValueError("Invalid manager protocol")
+
+# Search binary settings
+search_binary = Path(__file__).parent.parent / "Search/search"
+
+# Search binary settings validation
+if not search_binary.exists():
+    raise ValueError("Search binary not found")

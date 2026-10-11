@@ -15,7 +15,7 @@ LIBRARIES = -lgmp -lgmpxx
 INCLUDES = -I$(INCLUDE_DIRECTORY) $(addprefix -I, $(wildcard $(LIBRARIES_DIRECTORY)/*/Include))
 SOURCES = $(shell find $(SOURCE_DIRECTORY) -type f -name '*.cpp') $(shell find $(LIBRARIES_DIRECTORY) -type f -name '*.cpp')
 OBJECTS = $(patsubst %.cpp, $(BUILD_DIRECTORY)/%.o, $(SOURCES))
-TARGET = main
+TARGET = search
 
 # Default build rule
 all: $(TARGET)

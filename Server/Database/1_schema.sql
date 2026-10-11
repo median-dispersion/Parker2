@@ -148,14 +148,14 @@ CREATE TABLE jobs (
     end_index ui64 NOT NULL UNIQUE CHECK (end_index > start_index),
 
     -- The search index the worker has reached
-    index ui64 NOT NULL CONSTRAINT jobs_index_check CHECK (
-        index >= start_index
+    current_index ui64 NOT NULL CONSTRAINT jobs_current_index_check CHECK (
+        current_index >= start_index
         AND
-        index <= end_index
+        current_index <= end_index
     ),
 
     -- Number of solutions found by the worker in this job attempt
-    solutions ui64 NOT NULL DEFAULT 0,
+    solutions_found ui64 NOT NULL DEFAULT 0,
 
     -- Timestamp of when the job was created
     created_at timestamp(6) with time zone NOT NULL DEFAULT clock_timestamp(),
@@ -260,8 +260,8 @@ CREATE TABLE job_history (
     worker_id bigint NOT NULL REFERENCES workers(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
 
     -- Snapshot of various values at the time of capture
-    index ui64 NOT NULL,
-    solutions ui64 NOT NULL,
+    current_index ui64 NOT NULL,
+    solutions_found ui64 NOT NULL,
 
     -- Timestamp of the capture
     captured_at timestamp(6) with time zone NOT NULL DEFAULT clock_timestamp()

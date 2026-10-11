@@ -11,6 +11,9 @@
 #include <cstddef>
 #include <limits>
 
+// Capture the start time
+auto start_time = std::chrono::steady_clock::now();
+
 // ================================================================================================
 // Search loop
 // ================================================================================================
@@ -20,11 +23,8 @@ ui64 search(
     ui64 end_index
 ) {
 
-    // Capture the search start time
-    auto start_time = std::chrono::steady_clock::now();
-
     // Initialize the last update time
-    auto last_update_time = start_time;
+    auto last_update_time = std::chrono::steady_clock::now();
 
     // Initialize the number of valid solutions found in the search range
     ui64 solutions_found = 0;
@@ -42,10 +42,10 @@ ui64 search(
             last_update_time = current_time;
 
             // Get the current run time in seconds
-            fp64 current_run_time_seconds = std::chrono::duration<fp64>(current_time - start_time).count();
+            fp64 current_runtime_seconds = std::chrono::duration<fp64>(current_time - start_time).count();
 
             // Print a JSON update message
-            std::cout<<"{\"type\":\"update\",\"current_run_time_seconds\":"<<current_run_time_seconds<<",\"current_index\":"<<e<<"}"<<std::endl;
+            std::cout<<"{\"type\":\"update\",\"current_runtime_seconds\":"<<current_runtime_seconds<<",\"current_index\":"<<e<<"}"<<std::endl;
 
         }
 
@@ -230,9 +230,6 @@ ui64 search(
 // ================================================================================================
 int main(int, char *argv[]) {
 
-    // Capture the start time
-    auto start_time = std::chrono::steady_clock::now();
-
     // Get the start and end index of the search range
     // Maximum value for e = 2⁶⁴-1
     ui64 start_index = std::stoull(argv[1]);
@@ -328,10 +325,10 @@ int main(int, char *argv[]) {
     auto end_time = std::chrono::steady_clock::now();
 
     // Get the total execution time in seconds
-    fp64 total_execution_time_seconds = std::chrono::duration<fp64>(end_time - start_time).count();
+    fp64 total_runtime_seconds = std::chrono::duration<fp64>(end_time - start_time).count();
 
     // Print the final result as a JSON message
-    std::cout<<"{\"type\":\"result\",\"total_execution_time_seconds\":"<<total_execution_time_seconds<<",\"solutions_found\":"<<solutions_found<<"}"<<std::endl;
+    std::cout<<"{\"type\":\"result\",\"total_runtime_seconds\":"<<total_runtime_seconds<<",\"solutions_found\":"<<solutions_found<<"}"<<std::endl;
 
     // Exit cleanly
     return 0;

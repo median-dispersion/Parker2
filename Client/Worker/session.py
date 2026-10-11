@@ -17,6 +17,10 @@ class Session(requests.Session):
         **kwargs
     ):
 
+        # Raise an exception if the timeout is too low
+        if timeout < 1:
+            raise ValueError("Timeout too low")
+
         # Raise an exception if there are too few retries
         if retries < 1:
             raise ValueError("Too few retries")
@@ -43,7 +47,11 @@ class Session(requests.Session):
             else:
 
                 # Raise an exception if the response is an error
-                response.raise_for_status()
+                if 400 <= response.status_code < 600:
+                    raise requests.HTTPError(
+                        f"Response code {response.status_code} on {response.url}: {response.text}",
+                        response = response
+                    )
 
                 # Else return the response
                 return response

@@ -12,53 +12,64 @@ class Worker(threading.Thread):
     # =============================================================================================
     # Initialization
     # =============================================================================================
-    def __init__(self, thread_id: int, *args, **kwargs):
-
-        # Initialize member variables
-        self._thread_id = thread_id
-        self._worker_name = f"{settings.worker_name}-{self._thread_id}"
-        self._logger = logging.getLogger(self._worker_name)
-        self._stop_event = threading.Event()
-        self._session: Session | None = None
-        self._worker_uuid: UUID | None  = None
-
-        # Re-check the worker name length and raise an exception if it is too long
-        if len(self._worker_name) > 64:
-            raise ValueError("Worker name too long")
+    def __init__(self, thread_index: int, *args, **kwargs):
 
         # Call the parent constructor
         super().__init__(*args, **kwargs)
+
+        # Set the worker name
+        self._name = f"{settings.worker_name}-{thread_index}"
+
+        # Re-check the worker name length and raise an exception if it is too long
+        if len(self._name) > 64:
+            raise ValueError("Worker name too long")
+
+        # Initialize member variables
+        self._logger = logging.getLogger(self._name)
+        self._stop_event = threading.Event()
+        self._session: Session | None = None
+        self._uuid: UUID | None  = None
+
+    # =============================================================================================
+    # Reset the worker to its initial state
+    # =============================================================================================
+    def _reset(self):
+        self._session = None
+        self._uuid = None
 
     # =============================================================================================
     # Connect to the manager
     # =============================================================================================
     def _connect(self):
 
-        # Connection URL
+        # Request URL
         url = f"{settings.manager_url}/worker/connect"
 
-        # Required JSON data
-        json = {"name": self._worker_name}
+        # Request body
+        body = {"name": self._name}
 
         # Connect to the manager
-        response = self._session.post(url = url, json = json)
+        response = self._session.post(url = url, json = body)
 
         # Set the worker UUID
-        self._worker_uuid = UUID(response.json()["uuid"])
+        self._uuid = UUID(response.json()["uuid"])
 
     # =============================================================================================
     # Disconnect from the manager
     # =============================================================================================
     def _disconnect(self):
 
-        # Disconnection URL
+        # Request URL
         url = f"{settings.manager_url}/worker/disconnect"
 
-        # Required JSON data
-        json = {"uuid": str(self._worker_uuid)}
+        # Request body
+        body = {"uuid": str(self._uuid)}
 
         # Disconnect from the manager
-        response = self._session.post(url = url, json = json)
+        self._session.post(url = url, json = body)
+
+        # Clear the worker UUID
+        self._uuid = None
 
     # =============================================================================================
     # Main worker loop
@@ -71,8 +82,10 @@ class Worker(threading.Thread):
         # Loop until stopped
         while not self._stop_event.is_set():
 
-            # Exception handler
             try:
+
+                # Reset the worker to its initial state
+                self._reset()
 
                 # Get a request session
                 self._session = Session()
@@ -87,9 +100,19 @@ class Worker(threading.Thread):
                 # Disconnect from the manager
                 self._disconnect()
 
-            # Log any unhandled exception and then continue
+            # Catch any unhandled exceptions
             except:
-                self._logger.exception("Unhandled exception occurred")
+
+                # Log the exception
+                self._logger.exception("Unhandled exception")
+
+                # If the worker is still connected try to disconnect it
+                # If the disconnect fails, log it and continue
+                if self._uuid != None:
+                    try:
+                        self._disconnect()
+                    except:
+                        self._logger.exception("Failed to disconnect after exception")
 
         # Log that the worker has stopped
         self._logger.info("Stopped")
@@ -98,6 +121,10 @@ class Worker(threading.Thread):
     # Stop the worker
     # =============================================================================================
     def stop(self):
+
+        # Raise an exception if the stop event is already set
+        if self._stop_event.is_set():
+            raise RuntimeError("This thread can only be stopped once")
 
         # Log the stop event
         self._logger.info("Stopping...")
