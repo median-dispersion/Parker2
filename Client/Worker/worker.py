@@ -49,10 +49,10 @@ class Worker(threading.Thread):
         body = {"name": self._name}
 
         # Connect to the manager
-        response = self._session.post(url = url, json = body)
+        response = self._session.post(url = url, json = body).json()
 
         # Set the worker UUID
-        self._uuid = UUID(response.json()["uuid"])
+        self._uuid = UUID(response["uuid"])
 
     # =============================================================================================
     # Disconnect from the manager
@@ -121,10 +121,6 @@ class Worker(threading.Thread):
     # Stop the worker
     # =============================================================================================
     def stop(self):
-
-        # Raise an exception if the stop event is already set
-        if self._stop_event.is_set():
-            raise RuntimeError("This thread can only be stopped once")
 
         # Log the stop event
         self._logger.info("Stopping...")

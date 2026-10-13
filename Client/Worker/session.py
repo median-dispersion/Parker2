@@ -47,7 +47,7 @@ class Session(requests.Session):
             else:
 
                 # Raise an exception if the response is an error
-                if 400 <= response.status_code < 600:
+                if response.status_code != requests.codes.ok:
                     raise requests.HTTPError(
                         f"Response code {response.status_code} on {response.url}: {response.text}",
                         response = response

@@ -45,7 +45,7 @@ ui64 search(
             fp64 current_runtime_seconds = std::chrono::duration<fp64>(current_time - start_time).count();
 
             // Print a JSON update message
-            std::cout<<"{\"type\":\"update\",\"current_runtime_seconds\":"<<current_runtime_seconds<<",\"current_index\":"<<e<<"}"<<std::endl;
+            std::cout<<"{\"type\":\"update\",\"current_runtime_seconds\":"<<current_runtime_seconds<<",\"current_index\":"<<e<<",\"solutions_found\":"<<solutions_found<<"}"<<std::endl;
 
         }
 
