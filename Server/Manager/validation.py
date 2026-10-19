@@ -61,12 +61,12 @@ def validate_integer(
         raise JSONArgumentValidator.ValidationError("Value is not an integer")
 
     # Raise an exception if the integer is too small
-    if minimum != None:
+    if minimum is not None:
         if integer < minimum:
             raise JSONArgumentValidator.ValidationError("Integer too small")
 
     # Raise an exception if the integer is too large
-    if maximum != None:
+    if maximum is not None:
         if integer > maximum:
             raise JSONArgumentValidator.ValidationError("Integer too large")
 

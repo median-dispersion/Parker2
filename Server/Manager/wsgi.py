@@ -25,7 +25,7 @@ class Response:
 
         # Initialize member variables
         self._status = status
-        self._headers = headers.copy() if headers != None else {}
+        self._headers = headers.copy() if headers is not None else {}
         self._body = body
 
     # =============================================================================================
@@ -91,7 +91,7 @@ class TextResponse(Response):
         self._encoding = encoding
 
         # Copy or initialize the headers
-        headers = headers.copy() if headers != None else {}
+        headers = headers.copy() if headers is not None else {}
 
         # Define the content type header
         content_type_name = "Content-Type"
@@ -165,11 +165,11 @@ class JSONResponse(Response):
     ):
 
         # Initialize member variables
-        self._body_dict = deepcopy(body) if body != None else {}
+        self._body_dict = deepcopy(body) if body is not None else {}
         self._encoding = encoding
 
         # Copy or initialize the headers
-        headers = headers.copy() if headers != None else {}
+        headers = headers.copy() if headers is not None else {}
 
         # Define the content type header
         content_type_name = "Content-Type"
@@ -342,8 +342,8 @@ class JSONArgumentValidator:
 
         # Initialize member variables
         self._function = function
-        self._arguments = arguments if arguments != None else ()
-        self._keyword_arguments = keyword_arguments if keyword_arguments != None else {}
+        self._arguments = arguments if arguments is not None else ()
+        self._keyword_arguments = keyword_arguments if keyword_arguments is not None else {}
 
     # =============================================================================================
     # Validate the JSON argument value
@@ -585,7 +585,7 @@ class WSGI:
                             return TextResponse(status = HTTPStatus.BAD_REQUEST, body = f"Argument '{argument}' invalid: {reason}")
 
                         # Update the body if an updated value was returned by the validation
-                        if value != None:
+                        if value is not None:
                             body[argument] = value
 
                 # Call the handler function
@@ -679,6 +679,17 @@ class WSGI:
             # If no handler function was found respond with 405 Method Not Allowed
             if not handler:
                 return WSGI._respond(start_response, StatusResponse(HTTPStatus.METHOD_NOT_ALLOWED))
+
+            # Check for methods that have a request body
+            if method in [HTTPMethod.PATCH, HTTPMethod.POST, HTTPMethod.PUT]:
+
+                # If the request doesn't provide a content length respond with 411 Length Required
+                if "CONTENT_LENGTH" not in environment:
+                    return WSGI._respond(start_response, StatusResponse(HTTPStatus.LENGTH_REQUIRED))
+
+                # If the request body is more than 8 MB respond with 413 Content Too Large
+                if int(environment["CONTENT_LENGTH"]) > 8_388_608:
+                    return WSGI._respond(start_response, StatusResponse(HTTPStatus.CONTENT_TOO_LARGE))
 
             # Call the handler function
             response = handler(Request(
