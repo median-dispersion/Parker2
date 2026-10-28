@@ -62,7 +62,10 @@ def signal_handler(number, frame):
 def main():
 
     # Initialize the logger
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level = settings.manager_log_level)
+
+    # Suppress urllib3 debug messages
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
 
     # Register signal handlers for worker termination
     signal.signal(signal.SIGINT, signal_handler)

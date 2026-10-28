@@ -17,7 +17,7 @@ if len(worker_name) > 64:
 
 # Raise an exception if the worker name contains illegal characters
 if not re.fullmatch("[a-zA-Z0-9-]+", worker_name):
-    raise ValueError("Illegal characters in name")
+    raise ValueError("Illegal characters in worker name")
 
 # There must be at least 1 worker thread
 if worker_threads < 1:
@@ -32,6 +32,7 @@ manager_host = os.getenv("MANAGER_HOST", "0.0.0.0")
 manager_port = os.getenv("MANAGER_PORT", "8000")
 manager_protocol = os.getenv("MANAGER_PROTOCOL", "http")
 manager_url = f"{manager_protocol}://{manager_host}:{manager_port}"
+manager_log_level = os.getenv("MANAGER_LOG_LEVEL", "debug").upper()
 
 # Manager settings validation
 if manager_protocol not in ["http", "https"]:
@@ -43,3 +44,7 @@ search_binary = Path(__file__).parent.parent / "Search/search"
 # Search binary settings validation
 if not search_binary.exists():
     raise ValueError("Search binary not found")
+
+# Log level must be valid
+if manager_log_level not in ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]:
+    raise ValueError("Invalid log level")

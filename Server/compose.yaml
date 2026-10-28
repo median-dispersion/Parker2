@@ -19,6 +19,11 @@ services:
       start_period: 60s
       start_interval: 5s
       retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "16m"
+        max-file: "4"
 
   # ===============================================================================================
   # Adminer database management
@@ -32,6 +37,11 @@ services:
     depends_on:
       postgresql:
         condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "16m"
+        max-file: "4"
 
   # ===============================================================================================
   # Manager container
@@ -44,3 +54,8 @@ services:
     depends_on:
       postgresql:
         condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "16m"
+        max-file: "4"

@@ -8,6 +8,7 @@ ENV WORKER_THREADS=1
 ENV MANAGER_HOST=0.0.0.0
 ENV MANAGER_PORT=8000
 ENV MANAGER_PROTOCOL=http
+ENV MANAGER_LOG_LEVEL=debug
 
 # Install system dependencies
 RUN apt-get update

@@ -263,6 +263,9 @@ class Worker(threading.Thread):
                 # Connect to the manager
                 self._connect()
 
+                # Log event
+                self._logger.debug(f"Connected as {self._uuid}")
+
                 # Initialize the next job size
                 next_job_size = 1
 
@@ -278,6 +281,9 @@ class Worker(threading.Thread):
                     # Claim a job
                     self._claim_job(next_job_size)
 
+                    # Log event
+                    self._logger.debug(f"Claimed job {self._job['uuid']}")
+
                     # Initialize the search thread
                     self._search = Search(self._job["start_index"], self._job["end_index"])
 
@@ -288,11 +294,17 @@ class Worker(threading.Thread):
                     # Start the search thread
                     self._search.start()
 
+                    # Log event
+                    self._logger.debug(f"Started search from {self._job['start_index']} to {self._job['end_index']}")
+
                     # Loop until the search is done
                     while not self._search.done:
 
                         # Update the job with the latest search values
                         self._update_job(self._search.current_index, self._search.solutions_found)
+
+                        # Log event
+                        self._logger.debug(f"Updated job {self._job['uuid']}")
 
                         # Delay the next job update for the amount of time set by the job rules
                         # Or until the search thread is done
@@ -308,12 +320,19 @@ class Worker(threading.Thread):
                     # Check if the search finished successfully
                     if self._search.finished:
 
+                        # Log event
+                        self._logger.debug("Finished search")
+
                         # Submit all solutions found by the search
                         for solution in self._search.solutions:
                             self._submit_solution(solution)
+                            self._logger.debug(f"Submitted solution {solution}")
 
                         # Finish the job
                         self._finish_job(self._search.total_runtime_seconds, self._search.solutions_found)
+
+                        # Log event
+                        self._logger.debug("Finished job")
 
                     # Raise an exception if the search never finished
                     elif not self._stop_event.is_set():
@@ -323,8 +342,14 @@ class Worker(threading.Thread):
                 if self._job is not None:
                     self._cancel_job("Worker shutdown")
 
+                # Log event
+                self._logger.debug("Canceled job")
+
                 # Disconnect from the manager
                 self._disconnect()
+
+                # Log event
+                self._logger.debug("Disconnected")
 
             # Catch any unhandled exceptions
             except:
