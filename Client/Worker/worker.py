@@ -242,6 +242,28 @@ class Worker(threading.Thread):
         self._session.post(url = url, json = body)
 
     # =============================================================================================
+    # Get the next job size
+    # =============================================================================================
+    def _get_next_job_size(self, total_runtime_seconds: float, target_duration_seconds: int):
+
+        # Get the size of the finished job
+        finished_job_size = self._job["end_index"] - self._job["start_index"]
+
+        # Calculate the iterations per second
+        iterations_per_second = finished_job_size / total_runtime_seconds
+
+        # Calculate the next job size using linear approximation
+        # This is not very accurate but good enough as long as the manger provides decent job rules
+        next_job_size = iterations_per_second * target_duration_seconds
+
+        # Convert the next job size to an integer and limit it to a minimum of 1
+        # The real next job size will also be clamped in accordance with the job rules from the manager
+        next_job_size = max(int(round(next_job_size)), 1)
+
+        # Return the next job size
+        return next_job_size
+
+    # =============================================================================================
     # Main worker loop
     # =============================================================================================
     def run(self):
@@ -327,6 +349,9 @@ class Worker(threading.Thread):
                         for solution in self._search.solutions:
                             self._submit_solution(solution)
                             self._logger.debug(f"Submitted solution {solution}")
+
+                        # Get the next job size
+                        next_job_size = self._get_next_job_size(self._search.total_runtime_seconds, job_rules["target_duration_seconds"])
 
                         # Finish the job
                         self._finish_job(self._search.total_runtime_seconds, self._search.solutions_found)

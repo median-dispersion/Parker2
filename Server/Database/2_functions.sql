@@ -604,15 +604,14 @@ BEGIN
     -- Raise an exception if the worker is not connected
     IF v_worker_id IS NULL THEN PERFORM raise_m0002(); END IF;
 
-    -- Get the job ID and lock it
-    -- The lock isn't really necessary
-    -- But it prevents the job form being change before the solution is submitted
-    SELECT id
-    INTO v_job_id
-    FROM jobs
+    -- Get the job ID by updating the job
+    -- This prevents the job from expiring while solutions are being submitted
+    UPDATE jobs
+    SET updated_at = clock_timestamp()
     WHERE uuid = p_job_uuid
     AND status = 'claimed'
-    FOR UPDATE;
+    RETURNING id
+    INTO v_job_id;
 
     -- Raise an exception if the job is not found
     IF v_job_id IS NULL THEN PERFORM raise_m0003(); END IF;

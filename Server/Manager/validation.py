@@ -86,10 +86,6 @@ def validate_cancellation_reason(reason: str) -> str:
     if len(reason) < 1:
         raise JSONArgumentValidator.ValidationError("Cancellation reason is empty")
 
-    # If the reason is too long clip it to a maximum of 1 million characters (roughly 1 MB of text)
-    if len(reason) > 1_000_000:
-        reason = reason[:1_000_000]
-
     # Return the validated reason
     return reason
 

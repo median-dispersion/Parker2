@@ -691,13 +691,20 @@ class WSGI:
                 if int(environment["CONTENT_LENGTH"]) > 8_388_608:
                     return WSGI._respond(start_response, StatusResponse(HTTPStatus.CONTENT_TOO_LARGE))
 
+                # Read the request body
+                body = environment["wsgi.input"].read()
+
+            # Set a dummy body if the request can't contain a body
+            else:
+                body = b""
+
             # Call the handler function
             response = handler(Request(
                 method = HTTPMethod(method),
                 path = path,
                 query = parse_qs(environment.get("QUERY_STRING", "")),
                 headers = WSGI._get_headers(environment),
-                body = environment["wsgi.input"].read()
+                body = body
             ))
 
             # If the handler didn't return a response, respond with 200 OK
