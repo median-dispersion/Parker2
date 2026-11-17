@@ -1,6 +1,7 @@
 #include "types.hpp"
 #include <string>
 #include "Quick64BitPrimes/Quick64BitPrimes.hpp" // Modified from https://github.com/median-dispersion/Quick-64-Bit-Primes
+#include "sum_of_two_squares_theorem.hpp"
 
 // ================================================================================================
 // Main
@@ -36,6 +37,16 @@ int main(int, char *argv[]) {
 
         // If no valid prime factors where found continue with the next value of e
         if (prime_factors.empty()) { continue; }
+
+        // Get the number of unique ways e² can be represented as the sum of two squares using the sum of two squares theorem
+        // Maximum value for e = 2⁶⁴-1
+        ui64 number_of_unique_sum_of_two_squares = sum_of_two_squares_count(prime_factors);
+
+        // If there are less than five unique ways e² can be represented as the sum of two squares
+        // Continue with the next value for e
+        // Technically only four ways are required, but because e² is a square
+        // The sum of two squares representations will contain an additional pair of (0² + e²), witch is a correct representation, just not very usefull
+        if (number_of_unique_sum_of_two_squares < 5) { continue; }
 
     }
 
