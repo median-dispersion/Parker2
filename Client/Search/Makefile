@@ -1,6 +1,7 @@
 # Directories
 INCLUDE_DIRECTORY = ./Include
 SOURCE_DIRECTORY = ./Source
+LIBRARIES_DIRECTORY = ./Libraries
 BUILD_DIRECTORY = ./Build
 
 # Compiler
@@ -8,8 +9,8 @@ COMPILER = g++
 COMPILER_FLAGS = -std=c++23 -Wall -Wextra -Werror -O3 -march=native -flto
 
 # Files and paths
-INCLUDES = -I$(INCLUDE_DIRECTORY)
-SOURCES = $(shell find $(SOURCE_DIRECTORY) -type f -name *.cpp)
+INCLUDES = -I$(INCLUDE_DIRECTORY) -I$(wildcard $(LIBRARIES_DIRECTORY)/*/Include)
+SOURCES = $(shell find $(SOURCE_DIRECTORY) -type f -name *.cpp) $(shell find $(LIBRARIES_DIRECTORY) -type f -name *.cpp)
 OBJECTS = $(patsubst %.cpp, $(BUILD_DIRECTORY)/%.o, $(SOURCES))
 TARGET = search
 
