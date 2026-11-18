@@ -2,6 +2,10 @@
 #include <string>
 #include "Quick64BitPrimes/Quick64BitPrimes.hpp" // Modified from https://github.com/median-dispersion/Quick-64-Bit-Primes
 #include "sum_of_two_squares_theorem.hpp"
+#include <unordered_set>
+#include <utility>
+#include "pair_hash.hpp"
+#include <stdexcept>
 
 // ================================================================================================
 // Main
@@ -47,6 +51,14 @@ int main(int, char *argv[]) {
         // Technically only four ways are required, but because e² is a square
         // The sum of two squares representations will contain an additional pair of (0² + e²), witch is a correct representation, just not very usefull
         if (number_of_unique_sum_of_two_squares < 5) { continue; }
+
+        // Get all sum of two squares representations of e² based on its prime factors
+        // Excluding negative solutions and different ordering
+        // Maximum value for e = 2⁶⁴-1
+        std::unordered_set<std::pair<ui64, ui64>, PairHash> square_root_pairs = sum_of_two_squares_representations(prime_factors);
+
+        // Check if the predicted and actually number of sum of two squares representations match
+        if (square_root_pairs.size() != number_of_unique_sum_of_two_squares) { throw std::logic_error("Incorrect number of sum of two squares representations!"); }
 
     }
 
