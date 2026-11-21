@@ -273,15 +273,9 @@ def finish_job(request: JSONRequest) -> TextResponse | None:
 @main.requires_json({
     "worker_uuid": validation.uuid,
     "job_uuid": validation.uuid,
-    "a": validation.ui64,
-    "b": validation.ui64,
-    "c": validation.ui64,
-    "d": validation.ui64,
     "e": validation.ui64,
-    "f": validation.ui64,
-    "g": validation.ui64,
-    "h": validation.ui64,
-    "i": validation.ui64
+    "x": validation.ui128,
+    "y": validation.ui128
 })
 def submit_solution(request: JSONRequest):
 
@@ -293,15 +287,9 @@ def submit_solution(request: JSONRequest):
     job_uuid = body["job_uuid"]
 
     # Get the solution values
-    a = body["a"]
-    b = body["b"]
-    c = body["c"]
-    d = body["d"]
     e = body["e"]
-    f = body["f"]
-    g = body["g"]
-    h = body["h"]
-    i = body["i"]
+    x = body["x"]
+    y = body["y"]
 
     # Try to submit a solution
     try:
@@ -311,9 +299,9 @@ def submit_solution(request: JSONRequest):
                     SELECT submit_solution(
                         {worker_uuid},
                         {job_uuid},
-                        {a}, {b}, {c},
-                        {d}, {e}, {f},
-                        {g}, {h}, {i}
+                        {e},
+                        {x},
+                        {y}
                     );
                 """)
 

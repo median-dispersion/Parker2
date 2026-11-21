@@ -132,9 +132,9 @@ class Search(threading.Thread):
                     case "solution":
                         with self._lock:
                             self._solutions.append({
-                                "a": int(data["a"]), "b": int(data["b"]), "c": int(data["c"]),
-                                "d": int(data["d"]), "e": int(data["e"]), "f": int(data["f"]),
-                                "g": int(data["g"]), "h": int(data["h"]), "i": int(data["i"])
+                                "e": int(data["e"]),
+                                "x": int(data["x"]),
+                                "y": int(data["y"])
                             })
 
                     # Finalize the search values

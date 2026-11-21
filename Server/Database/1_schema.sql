@@ -13,6 +13,15 @@ CREATE DOMAIN ui64 AS numeric(20, 0) CHECK (
 -- CREATE DOMAIN ui64 AS bigint CHECK (VALUE >= 0);
 
 -- ================================================================================================
+-- Custom unsigned 128-Bit integer type
+-- ================================================================================================
+CREATE DOMAIN ui128 AS numeric(39, 0) CHECK (
+    VALUE >= 0
+    AND
+    VALUE <= 340282366920938463463374607431768211455
+);
+
+-- ================================================================================================
 -- Search table
 -- ================================================================================================
 CREATE TABLE search (
@@ -292,15 +301,9 @@ CREATE TABLE solutions (
     job_id bigint NOT NULL REFERENCES jobs(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
 
     -- Solution values
-    a ui64 NOT NULL,
-    b ui64 NOT NULL,
-    c ui64 NOT NULL,
-    d ui64 NOT NULL,
     e ui64 NOT NULL,
-    f ui64 NOT NULL,
-    g ui64 NOT NULL,
-    h ui64 NOT NULL,
-    i ui64 NOT NULL,
+    x ui128 NOT NULL,
+    y ui128 NOT NULL,
 
     -- Timestamp of when the solution was submitted
     submitted_at timestamp(6) with time zone NOT NULL DEFAULT clock_timestamp()

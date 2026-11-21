@@ -554,15 +554,9 @@ $$;
 CREATE FUNCTION submit_solution(
     p_worker_uuid uuid,
     p_job_uuid uuid,
-    p_a ui64,
-    p_b ui64,
-    p_c ui64,
-    p_d ui64,
     p_e ui64,
-    p_f ui64,
-    p_g ui64,
-    p_h ui64,
-    p_i ui64
+    p_x ui128,
+    p_y ui128
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -580,15 +574,9 @@ BEGIN
     IF
         p_worker_uuid IS NULL OR
         p_job_uuid IS NULL OR
-        p_a IS NULL OR
-        p_b IS NULL OR
-        p_c IS NULL OR
-        p_d IS NULL OR
         p_e IS NULL OR
-        p_f IS NULL OR
-        p_g IS NULL OR
-        p_h IS NULL OR
-        p_i IS NULL
+        p_x IS NULL OR
+        p_y IS NULL
     THEN
         PERFORM raise_m0001();
     END IF;
@@ -620,15 +608,15 @@ BEGIN
     INSERT INTO solutions(
         worker_id,
         job_id,
-        a, b ,c,
-        d, e, f,
-        g, h, i
+        e,
+        x,
+        y
     ) VALUES (
         v_worker_id,
         v_job_id,
-        p_a, p_b, p_c,
-        p_d, p_e, p_f,
-        p_g, p_h, p_i
+        p_e,
+        p_x,
+        p_y
     );
 
 END;

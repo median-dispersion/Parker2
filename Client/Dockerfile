@@ -12,7 +12,7 @@ ENV MANAGER_LOG_LEVEL=debug
 
 # Install system dependencies
 RUN apt-get update
-RUN apt-get install -y make g++ libgmp-dev python3 python3-venv tini
+RUN apt-get install -y make g++ python3 python3-venv tini
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/*
 
@@ -26,7 +26,7 @@ RUN find -type d -name __pycache__ -prune -exec rm -rf {} +
 # Build search binary
 WORKDIR /Client/Search
 RUN make clean
-RUN make -j$(nproc)
+RUN make -j $(nproc)
 RUN rm -rf Build Include Libraries Source Makefile
 
 # Install python dependencies
