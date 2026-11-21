@@ -10,6 +10,8 @@
 #include "magic_square_offsets.hpp"
 #include "helper_functions.hpp"
 #include <iostream>
+#include <chrono>
+#include <limits>
 
 // ================================================================================================
 // Main
@@ -21,6 +23,12 @@ int main(int, char *argv[]) {
     ui64 start_index = std::stoull(argv[1]);
     ui64 end_index = std::stoull(argv[2]);
 
+    // Set the print style of floating point values to a fixed number of 5 decimal places
+    std::cout << std::fixed << std::setprecision(5);
+
+    // Print the JSON initialization message
+    std::cout<<"{\"type\":\"initialization\",\"start_index\":"<<start_index<<",\"end_index\":"<<end_index<<"}"<<std::endl;
+
     // Make sure the start index is at least 5
     if (start_index < 5) { start_index = 5; }
 
@@ -29,8 +37,34 @@ int main(int, char *argv[]) {
     // Maximum value for e = 2⁶⁴-4
     start_index += (1 - start_index % 4 + 4) % 4;
 
+    // Initialize the number of solutions found in the search range
+    ui64 solutions_found = 0;
+
+    // Capture the start time
+    auto start_time = std::chrono::steady_clock::now();
+
+    // Initialize the last update time
+    auto last_update_time = start_time;
+
     // Loop through every value in the search range where e ≡ 1 (mod 4)
     for (ui64 e = start_index; e < end_index; e += 4) {
+
+        // Get the current time
+        auto current_time = std::chrono::steady_clock::now();
+
+        // Check if the update interval of 60 seconds has been reached
+        if (current_time - last_update_time >= std::chrono::seconds(60)) {
+
+            // Set the last update time to the current time
+            last_update_time = current_time;
+
+            // Get the current run time in seconds
+            fp64 current_runtime_seconds = std::chrono::duration<fp64>(current_time - start_time).count();
+
+            // Print a JSON update message
+            std::cout<<"{\"type\":\"update\",\"current_runtime_seconds\":"<<current_runtime_seconds<<",\"current_index\":"<<e<<",\"solutions_found\":"<<solutions_found<<"}"<<std::endl;
+
+        }
 
         // If e is a prime continue with the next value of e
         // A prime can not be represented as a sum of two squares in at least four unique ways
@@ -128,8 +162,19 @@ int main(int, char *argv[]) {
                 // If the x + y sum is also in the list of offsets a working magic square of squares is found
                 if (magic_square_offsets[large_index] == sum) {
 
-                    // Print the center value and working offsets as JSON
-                    std::cout<<"{\"e\":"<<e<<",\"x\":"<<x<<",\"y\":"<<y<<"}"<<std::endl;
+                    // Immediately print the center value and working offsets as JSON
+                    std::cout<<"{\"type\":\"solution\",\"e\":"<<e<<",\"x\":"<<x<<",\"y\":"<<y<<"}"<<std::endl;
+
+                    // Prevent overflows in the number of found solutions
+                    // Finding 2⁶⁴-1 valid solutions in a given search range is EXTREMELY unlikely!
+                    // And is indicative an implementation mistake
+                    // Throw an exception if the number of found solutions is equal to 2⁶⁴-1
+                    if (solutions_found == std::numeric_limits<ui64>::max()) {
+                        throw std::overflow_error("Found to many solutions!");
+                    }
+
+                    // Increase the number of found solutions by one
+                    ++solutions_found;
 
                 }
 
@@ -138,6 +183,15 @@ int main(int, char *argv[]) {
         }
 
     }
+
+    // Capture the end time
+    auto end_time = std::chrono::steady_clock::now();
+
+    // Get the total runtime time in seconds
+    fp64 total_runtime_seconds = std::chrono::duration<fp64>(end_time - start_time).count();
+
+    // Print the final result as a JSON message
+    std::cout<<"{\"type\":\"result\",\"total_runtime_seconds\":"<<total_runtime_seconds<<",\"solutions_found\":"<<solutions_found<<"}"<<std::endl;
 
     // Exit cleanly
     return 0;
