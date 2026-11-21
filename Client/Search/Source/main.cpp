@@ -1,11 +1,13 @@
 #include "types.hpp"
 #include <string>
 #include "Quick64BitPrimes/Quick64BitPrimes.hpp" // Modified from https://github.com/median-dispersion/Quick-64-Bit-Primes
+#include <vector>
 #include "sum_of_two_squares_theorem.hpp"
 #include <unordered_set>
 #include <utility>
 #include "pair_hash.hpp"
 #include <stdexcept>
+#include "magic_square_offsets.hpp"
 
 // ================================================================================================
 // Main
@@ -59,6 +61,14 @@ int main(int, char *argv[]) {
 
         // Check if the predicted and actually number of sum of two squares representations match
         if (square_root_pairs.size() != number_of_unique_sum_of_two_squares) { throw std::logic_error("Incorrect number of sum of two squares representations!"); }
+
+        // Generate an ordered list of offsets (x and y) from the center value e that can be used to construct magic squares
+        // Unsigned 128-bit integers must be used for overflow safety because an offset could be as large as e²
+        // So for a value of e = 2⁶⁴-1 the offset would be (2⁶⁴-1)², which fits into an unsigned 128-bit integer
+        // Technically unsigned 128-bit integer are only needed for values of e > 2³²
+        // But that point will be reached so quickly that implementing a templated version seems unecessary
+        // Maximum value for e = 2⁶⁴-1
+        std::vector<ui128> magic_square_offsets = ordered_magic_square_offsets(square_root_pairs);
 
     }
 
