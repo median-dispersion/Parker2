@@ -8,6 +8,8 @@
 #include "pair_hash.hpp"
 #include <stdexcept>
 #include "magic_square_offsets.hpp"
+#include "helper_functions.hpp"
+#include <iostream>
 
 // ================================================================================================
 // Main
@@ -69,6 +71,71 @@ int main(int, char *argv[]) {
         // But that point will be reached so quickly that implementing a templated version seems unecessary
         // Maximum value for e = 2⁶⁴-1
         std::vector<ui128> magic_square_offsets = ordered_magic_square_offsets(square_root_pairs);
+
+        // The list of offsets includes 0 which is a trivial solution that leads to duplicate values
+        // Therefore the start index of the offset list is shifted by 1 to exclude the trivial solution
+        // Setting this value to 0 will generate working magic square of squares that contain duplicate values
+        ui64 y_start = 1;
+
+        // Get the minimum and maximum offset values from the list
+        ui128 minimum_offset = magic_square_offsets[y_start];
+        ui128 maximum_offset = magic_square_offsets.back();
+
+        // This loop loops through all offsets as x and y where x > y
+        // Then check if x + y and x - y are also in the list of offsets
+        // If they are a working magic square of squares is found so print the result
+        for (ui64 x_index = y_start + 1; x_index < magic_square_offsets.size(); ++x_index) {
+
+            // Get x
+            ui128 x = magic_square_offsets[x_index];
+
+            // Define an index for all values that are smaller or equal to x
+            ui64 small_index = x_index;
+
+            // Define an index for all values that are larger or equal to x
+            ui64 large_index = x_index;
+
+            // Loop through every value of y, where y < x
+            for (ui64 y_index = y_start; y_index < x_index; ++y_index) {
+
+                // Get y
+                ui128 y = magic_square_offsets[y_index];
+
+                // Calculate the x - y difference
+                ui128 difference = x - y;
+
+                // Check if x - y is less than the smallest offset
+                // If it is, no larger y value will work so break the loop and continue with the next value for x
+                if (difference < minimum_offset) { break; }
+
+                // Check if x + y is more than the largest offset value, in an overflow safe way
+                // If it is, no larger y value will work so break the loop and continue with the next value for x
+                if (x > maximum_offset - y) { break; }
+
+                // Calculate the x + y sum
+                ui128 sum = x + y;
+
+                // Loop through all offsets smaller or equal to x until one matches or falls short of the x - y difference
+                while (magic_square_offsets[small_index] > difference) { --small_index; }
+
+                // If the offset falls short of the difference it means that x - y is not in the list of offsets
+                // Continue with the next value for y
+                if (magic_square_offsets[small_index] != difference) { continue; }
+
+                // Loop through all offsets larger or equal to x until one matches or exceeds the x + y sum
+                while (magic_square_offsets[large_index] < sum) { ++large_index; }
+
+                // If the x + y sum is also in the list of offsets a working magic square of squares is found
+                if (magic_square_offsets[large_index] == sum) {
+
+                    // Print the center value and working offsets as JSON
+                    std::cout<<"{\"e\":"<<e<<",\"x\":"<<x<<",\"y\":"<<y<<"}"<<std::endl;
+
+                }
+
+            }
+
+        }
 
     }
 
