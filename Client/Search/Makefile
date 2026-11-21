@@ -8,21 +8,21 @@ BUILD_DIRECTORY = ./Build
 COMPILER = g++
 COMPILER_FLAGS = -std=c++23 -Wall -Wextra -Werror -O3 -march=native -flto
 
-# Libraries
-LIBRARIES = -lgmp -lgmpxx
-
 # Files and paths
-INCLUDES = -I$(INCLUDE_DIRECTORY) $(addprefix -I, $(wildcard $(LIBRARIES_DIRECTORY)/*/Include))
-SOURCES = $(shell find $(SOURCE_DIRECTORY) -type f -name '*.cpp') $(shell find $(LIBRARIES_DIRECTORY) -type f -name '*.cpp')
+INCLUDES = -I$(INCLUDE_DIRECTORY) -I$(wildcard $(LIBRARIES_DIRECTORY)/*/Include)
+SOURCES = $(shell find $(SOURCE_DIRECTORY) -type f -name *.cpp) $(shell find $(LIBRARIES_DIRECTORY) -type f -name *.cpp)
 OBJECTS = $(patsubst %.cpp, $(BUILD_DIRECTORY)/%.o, $(SOURCES))
 TARGET = search
+
+# Mark as action, not file
+.PHONY: all clean
 
 # Default build rule
 all: $(TARGET)
 
 # Link object files to create executable
 $(TARGET): $(OBJECTS)
-	$(COMPILER) $(COMPILER_FLAGS) $^ $(LIBRARIES) -o $@
+	$(COMPILER) $(COMPILER_FLAGS) $^ -o $@
 
 # Compile source files into object files
 $(BUILD_DIRECTORY)/%.o: %.cpp

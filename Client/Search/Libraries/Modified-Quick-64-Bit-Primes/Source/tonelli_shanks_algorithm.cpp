@@ -141,7 +141,7 @@ namespace q64bp {
             while (temporary_exponent) {
 
                 new_factor = modular_multiplication(new_factor, new_factor, prime);
-                temporary_exponent--;
+                --temporary_exponent;
 
             }
 

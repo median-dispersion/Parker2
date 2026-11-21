@@ -2,20 +2,13 @@
 #define PARKER2_TYPES_HPP
 
 #include <cstdint>
-#include <gmpxx.h>
 #include <stdfloat>
 
 // Unsigned 64-bit integer alias
 using ui64 = std::uint64_t;
 
-// Check if the __uint128_t type is available and set its alias
-#ifdef __SIZEOF_INT128__
-#define PARKER2_UI128_AVAILABLE
+// Unsigned 128-bit integer alias
 using ui128 = __uint128_t;
-#endif
-
-// GNU Multiple Precision Arithmetic Library integer alias
-using gmpi = mpz_class;
 
 // 64-bit floating-point alias
 using fp64 = std::float64_t;

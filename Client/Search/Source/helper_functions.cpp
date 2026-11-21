@@ -1,13 +1,12 @@
 #include "helper_functions.hpp"
-#include "types.hpp"
 #include <iostream>
+#include "types.hpp"
 #include <string>
 #include <algorithm>
 
 // ================================================================================================
 // Overload the << operator to support printing of unsigned 128-bit integers
 // ================================================================================================
-#ifdef PARKER2_UI128_AVAILABLE
 std::ostream& operator<<(std::ostream& stream, ui128 value) {
 
     // If the value is zero print "0"
@@ -20,7 +19,8 @@ std::ostream& operator<<(std::ostream& stream, ui128 value) {
     while (value) {
 
         // Add the last digit of the value to the string
-        string.push_back('0' + (value % 10));
+        // Offset the value by 48 to get the correct decimal representation of the ASCII character
+        string.push_back(48 + (value % 10));
 
         // Remove the last digit from the value by dividing it by 10
         value /= 10;
@@ -34,4 +34,3 @@ std::ostream& operator<<(std::ostream& stream, ui128 value) {
     return stream << string;
 
 }
-#endif

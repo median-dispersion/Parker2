@@ -1,0 +1,2 @@
+> [!IMPORTANT]
+> This is a heavily modified version of the [Quick 64-Bit Primes](https://github.com/median-dispersion/Quick-64-Bit-Primes) library. A lot of input validation checks were removed for better performance in the search for a magic square of squares. Most inputs now require the number to be odd, not prime, and in the form n ≡ 1 (mod 4). For a general, unmodified, and safe implementation, please look at: https://github.com/median-dispersion/Quick-64-Bit-Primes

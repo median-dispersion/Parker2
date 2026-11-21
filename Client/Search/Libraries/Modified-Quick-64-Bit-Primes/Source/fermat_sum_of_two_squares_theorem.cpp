@@ -58,12 +58,9 @@ namespace q64bp {
 
         // Any prime passed to this function must be
         // prime == must be prime
-        // prime == 2 or prime % 4 == 1
+        // prime % 4 == 1
         // prime % 4 != 3
         // Otherwise it is unsafe to use!
-
-        // If the prime is two return the trivial solutions
-        if (prime == 2) { return {1, 1}; }
 
         // Set x to the prime
         ui64 x = prime;

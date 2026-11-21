@@ -7,7 +7,9 @@
 namespace q64bp {
 
     // ============================================================================================
-    // Decompose a number into its prime factors
+    // Pretend that the input number is squared
+    // Decompose the number into its prime factors
+    // But only if all prime factors are in the form p ≡ 1 (mod 4)
     // ============================================================================================
     std::vector<PrimeFactor> squared_prime_decomposition_1mod4(ui64 number);
 
